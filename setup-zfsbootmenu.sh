@@ -23,7 +23,10 @@ get_username_and_password(){
 select_disk() {
   echo "Available disks:"
   # List available disks with lsblk and store them in an array
-  mapfile -t disks < <(lsblk -dn -o NAME,SIZE,TYPE | grep 'disk')
+  #mapfile -t disks < <(lsblk -dn -o NAME,SIZE,TYPE | grep 'disk')
+  mapfile -t disks < <(lsblk -dn -o NAME,WWN,TYPE,SIZE | grep 'disk' | awk '{print $1,"wwn-" $2,$3,$4}')
+  #ls -la /dev/disk/by-id  | grep -Ei 'ata-|wwn-' | grep -Eiv 'part'
+  #ls -la /dev/disk/by-id  | grep -Ei 'ata-|wwn-' | grep -Eiv 'part' | awk '{print substr($11,7,10),$9}'
 
   # Display disks with numbering
   for i in "${!disks[@]}"; do
@@ -35,9 +38,9 @@ select_disk() {
     read -p "Enter the number of the disk you want to use for boot and pool (e.g., 1, 2): " choice
     if [[ $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
       # Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
-      selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $1}')
-      BOOT_DISK="/dev/$selected_disk"
-      POOL_DISK="/dev/$selected_disk"
+      selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
+      BOOT_DISK="/dev/disk/by-id/$selected_disk"
+      POOL_DISK="/dev/disk/by-id/$selected_disk"
       echo "Selected disk: $BOOT_DISK"
       break
     else
@@ -109,7 +112,7 @@ export_import_zpool() {
 
 setup_base_system() {
   echo "Installing base system with debootstrap..."
-  debootstrap bookworm $MOUNT_POINT
+  debootstrap trixie $MOUNT_POINT
   cp /etc/hostid $MOUNT_POINT/etc/hostid
   cp /etc/resolv.conf $MOUNT_POINT/etc/resolv.conf
 }
