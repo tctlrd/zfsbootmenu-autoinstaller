@@ -154,7 +154,7 @@ enter_chroot() {
 	
 	apt install -y zfsutils-linux
 	
-	apt install -y zfs-initramfs dosfstools efibootmgr curl
+	apt install -y zfs-dkms zfs-initramfs dosfstools efibootmgr curl
 	
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 	
