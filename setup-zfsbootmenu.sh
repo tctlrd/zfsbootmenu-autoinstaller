@@ -13,9 +13,9 @@ ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 get_username_and_password(){
   # Prompt user for variables
   read -p "Enter username for the new user: " USERNAME
-  read -sp "Enter password for the new user: " USER_PASSWORD
+  read -p "Enter password for the new user: " USER_PASSWORD
   echo
-  read -sp "Enter root password: " ROOT_PASSWORD
+  read -p "Enter root password: " ROOT_PASSWORD
   echo
   read -p "Enter hostname for this system: " HOSTNAME
 }
