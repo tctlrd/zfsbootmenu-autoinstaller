@@ -24,9 +24,14 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    sudo su # switches to root
    apt update
    apt upgrade
+   apt purge zfs-dkms
    apt install curl
    curl -O https://raw.githubusercontent.com/sartirious/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
    chmod +x setup-zfsbootmenu.sh
+   
+   apt install linux-headers-$(uname -r) zfs-dkms zfsutils-linux
+   dpkg-reconfigure zfs-dkms
+      
    ./setup-zfsbootmenu.sh
    ```
 
