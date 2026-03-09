@@ -127,26 +127,26 @@ prepare_chroot() {
 
 enter_chroot() {
 	echo "Entering chroot environment to configure system..."
-	chroot $MOUNT_POINT /bin/bash <<-EOF
+	chroot $MOUNT_POINT /bin/bash #<<-EOF
 	# Set hostname
 	echo "$HOSTNAME" > /etc/hostname
 	echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
-	
+
 	# Configure apt sources
 		cat > /etc/apt/sources.list <<-EOF_APT
-		deb http://deb.debian.org/debian trixie main contrib non-free-firmware
-		deb-src http://deb.debian.org/debian trixie main contrib non-free-firmware
-		
-		deb http://deb.debian.org/debian-security trixie-security main contrib non-free-firmware
-		deb-src http://deb.debian.org/debian-security/ trixie-security main contrib non-free-firmware
-		
-		deb http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
-		deb-src http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
-		
-		deb http://deb.debian.org/debian trixie-backports main contrib non-free-firmware
-		deb-src http://deb.debian.org/debian trixie-backports main contrib non-free-firmware
+		Types: deb deb-src
+		URIs: http://deb.debian.org/debian/
+		Suites: trixie trixie-updates
+		Components: main non-free-firmware contrib
+		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+		Types: deb deb-src
+		URIs: http://security.debian.org/debian-security/
+		Suites: trixie-security
+		Components: main non-free-firmware contrib
+		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 		EOF_APT
-	
+
 	# Update and install necessary packages
 	export DEBIAN_FRONTEND=noninteractive
 	apt update
