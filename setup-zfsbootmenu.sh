@@ -135,7 +135,7 @@ install_host_packages() {
   echo "Installing necessary packages"
   apt update
 	apt full-upgrade -y
-  apt install -y debootstrap gdisk dkms linux-headers-$(uname -r)
+  apt install -y debootstrap gdisk dosfstools dkms linux-headers-$(uname -r)
   apt install -y zfsutils-linux
 }
 
@@ -160,8 +160,12 @@ partition_disk() {
     fi
   done
   echo "Pool device found: $POOL_DEVICE"
+  # Format boot partition early to get UUID
+  echo "Formatting boot partition..."
+  mkfs.vfat -F32 "$BOOT_DEVICE"
+  # Get UUID after formatting
   BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
-  echo "Boot UUID is $BOOT_UUID"
+  echo "Boot UUID after formatting: $BOOT_UUID"
 }
 
 create_zpool() {
@@ -243,7 +247,6 @@ enter_chroot() {
 		EOF_APT
 
 	# Update and install necessary packages
-	export DEBIAN_FRONTEND=noninteractive
 	export LC_ALL=C
 	export LANG=C
 	apt update
@@ -257,7 +260,8 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "Installing kernel and ZFS packages..."
-	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs dosfstools
+	apt install -y linux-headers-amd64 linux-image-amd64
+	apt install -y zfs-initramfs
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
   
 	# Set root password
@@ -280,10 +284,6 @@ enter_chroot() {
 	echo "Configuring ZFSBootMenu command-line arguments..."
 	zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
 	zfs set org.zfsbootmenu:keysource="$POOL_NAME/ROOT/$ID" $POOL_NAME
-
-	# Set up EFI filesystem
-	echo "Setting up EFI filesystem..."
-	mkfs.vfat -F32 "$BOOT_DEVICE"
 
 	# Configure fstab entry for EFI
 	echo "Configuring fstab for EFI partition..."
