@@ -141,6 +141,8 @@ partition_disk() {
   sgdisk --zap-all "$BOOT_DISK"
   sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
   sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
+  lsblk
+  ls -l /dev/disk/by-id/
 }
 
 create_zpool() {
