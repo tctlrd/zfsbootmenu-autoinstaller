@@ -1,21 +1,21 @@
 #!/bin/bash
 
 # Automatically set other variables
-BOOT_DISK="/dev/nvme0n1"
+BOOT_DISK="/dev/vda"
 BOOT_PART="1"
-POOL_DISK="/dev/nvme0n1"
+POOL_DISK="/dev/vda"
 POOL_PART="2"
 POOL_NAME="zroot"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 MOUNT_POINT="/mnt"
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
+export DEBIAN_FRONTEND=noninteractive
 
 get_username_and_password(){
   # Prompt user for variables
-  read -p "Enter username for the new user: " USERNAME
-  read -p "Enter password for the new user: " USER_PASSWORD
-  echo
   read -p "Enter root password: " ROOT_PASSWORD
+  echo
+  read -p "Enter encryption passphrase: " ENC_PHRASE
   echo
   read -p "Enter hostname for this system: " HOSTNAME
 }
@@ -23,10 +23,7 @@ get_username_and_password(){
 select_disk() {
   echo "Available disks:"
   # List available disks with lsblk and store them in an array
-  #mapfile -t disks < <(lsblk -dn -o NAME,SIZE,TYPE | grep 'disk')
   mapfile -t disks < <(lsblk -dn -o NAME,WWN,TYPE,SIZE | grep 'disk' | awk '{print $1,"wwn-" $2,$3,$4}')
-  #ls -la /dev/disk/by-id  | grep -Ei 'ata-|wwn-' | grep -Eiv 'part'
-  #ls -la /dev/disk/by-id  | grep -Ei 'ata-|wwn-' | grep -Eiv 'part' | awk '{print substr($11,7,10),$9}'
 
   # Display disks with numbering
   for i in "${!disks[@]}"; do
@@ -41,218 +38,217 @@ select_disk() {
       selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
       BOOT_DISK="/dev/disk/by-id/$selected_disk"
       POOL_DISK="/dev/disk/by-id/$selected_disk"
+      BOOT_DEVICE="${BOOT_DISK}${BOOT_PART}"
+      POOL_DEVICE="${POOL_DISK}${POOL_PART}"
       echo "Selected disk: $BOOT_DISK"
       break
     else
       echo "Invalid choice. Please select a number from the list."
     fi
   done
-  echo "Boot Disk is set to $BOOT_DISK"
-  echo "Pool Disk is set to $POOL_DISK"
-}
-
-
-
-
-# Functions
-generate_hostid() {
-  echo "Generating host ID..."
-  zgenhostid -f 0x00bab10c
+  echo "Boot device is set to $BOOT_DEVICE"
+  echo "Pool device is set to $POOL_DEVICE"
 }
 
 configure_apt_sources() {
   echo "Configuring APT sources..."
-  cat > /etc/apt/sources.list <<EOF
-deb http://deb.debian.org/debian trixie main contrib non-free-firmware
-deb-src http://deb.debian.org/debian trixie main contrib non-free-firmware
+  cat > /etc/apt/sources.list.d/debian.sources <<EOF
+Types: deb deb-src
+URIs: http://deb.debian.org/debian/
+Suites: trixie trixie-updates
+Components: main non-free-firmware contrib
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-deb http://deb.debian.org/debian-security trixie-security main contrib non-free-firmware
-deb-src http://deb.debian.org/debian-security/ trixie-security main contrib non-free-firmware
-
-deb http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
-deb-src http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
-
-deb http://deb.debian.org/debian trixie-backports main contrib non-free-firmware
-deb-src http://deb.debian.org/debian trixie-backports main contrib non-free-firmware
+Types: deb deb-src
+URIs: http://security.debian.org/debian-security/
+Suites: trixie-security
+Components: main non-free-firmware contrib
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
 }
 
 install_host_packages() {
-  echo "Installing necessary packages"
-  apt update
-  apt install -y dosfstools efibootmgr curl debootstrap gdisk dkms zfsutils-linux # Install efibootmgr 
-  # Setup efivards kernel module
-  echo "Setup efivars kernel module"
-  modprobe efivars
+    echo "Installing necessary packages"
+    apt update
+    apt install -y debootstrap gdisk dkms linux-headers-$(uname -r)
+    apt install -y zfsutils-linux
 }
 
 partition_disk() {
-  echo "Partitioning disk $POOL_DISK..."
-  sgdisk --zap-all $POOL_DISK
-  sgdisk -n1:1M:+512M -t1:EF00 $BOOT_DISK
-  sgdisk -n2:0:-10M -t2:BF00 $POOL_DISK
+    zgenhostid -f 0x00bab10c
+    zpool labelclear -f "$POOL_DISK"
+    wipefs -a "$POOL_DISK"
+    wipefs -a "$BOOT_DISK"
+    sgdisk --zap-all "$POOL_DISK"
+    sgdisk --zap-all "$BOOT_DISK"
+    sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
+    sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
 }
 
 create_zpool() {
-  echo "Creating ZFS pool and datasets..."
-  zpool create -f -o ashift=12 -O compression=lz4 -O acltype=posixacl -O xattr=sa -O relatime=on -o autotrim=on -o compatibility=openzfs-2.1-linux -m none $POOL_NAME ${POOL_DISK}p${POOL_PART}
-  zfs create -o mountpoint=none $POOL_NAME/ROOT
-  zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
-  zfs create -o mountpoint=/home $POOL_NAME/home
-  zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
-}
-
-export_import_zpool() {
-  echo "Exporting and re-importing ZFS pool for mounting..."
-  zpool export $POOL_NAME
-  zpool import -N -R $MOUNT_POINT $POOL_NAME
-  zfs mount $POOL_NAME/ROOT/$ID
-  zfs mount $POOL_NAME/home
+    echo "$ENC_PHRASE" > /etc/zfs/zroot.key
+    chmod 000 /etc/zfs/zroot.key
+    echo "Creating ZFS pool and datasets..."
+    zpool create -f -o ashift=12 \
+    -O compression=lz4 \
+    -O acltype=posixacl \
+    -O xattr=sa \
+    -O relatime=on \
+    -O encryption=aes-256-gcm \
+    -O keylocation=file:///etc/zfs/zroot.key \
+    -O keyformat=passphrase \
+    -o autotrim=on \
+    -o compatibility=openzfs-2.2-linux \
+    -m none zroot "$POOL_DEVICE"
+    zfs create -o mountpoint=none $POOL_NAME/ROOT
+    zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
+    zfs create -o mountpoint=/home $POOL_NAME/home
+    zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
 }
 
 setup_base_system() {
-  echo "Installing base system with debootstrap..."
-  debootstrap trixie $MOUNT_POINT
-  cp /etc/hostid $MOUNT_POINT/etc/hostid
-  cp /etc/resolv.conf $MOUNT_POINT/etc/resolv.conf
+    echo "Installing base system with debootstrap..."
+    debootstrap trixie $MOUNT_POINT
+    cp /etc/hostid $MOUNT_POINT/etc/hostid
+    cp /etc/resolv.conf $MOUNT_POINT/etc/resolv.conf
 }
 
 prepare_chroot() {
-  echo "Mounting filesystems for chroot environment..."
-  mount -t proc proc $MOUNT_POINT/proc
-  mount -t sysfs sys $MOUNT_POINT/sys
-  mount -B /dev $MOUNT_POINT/dev
-  mount -t devpts pts $MOUNT_POINT/dev/pts
+    echo "Mounting filesystems for chroot environment..."
+    mount -t proc proc $MOUNT_POINT/proc
+    mount -t sysfs sys $MOUNT_POINT/sys
+    mount -B /dev $MOUNT_POINT/dev
+    mount -t devpts pts $MOUNT_POINT/dev/pts
 }
 
 enter_chroot() {
-	echo "Entering chroot environment to configure system..."
-	chroot $MOUNT_POINT /bin/bash #<<-EOF
-	# Set hostname
-	echo "$HOSTNAME" > /etc/hostname
-	echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
+    echo "Entering chroot environment to configure system..."
+    chroot $MOUNT_POINT /bin/bash #<<-EOF
+    # Set hostname
+    echo "$HOSTNAME" > /etc/hostname
+    echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
 
-	# Configure apt sources
-		cat > /etc/apt/sources.list <<-EOF_APT
-		Types: deb deb-src
-		URIs: http://deb.debian.org/debian/
-		Suites: trixie trixie-updates
-		Components: main non-free-firmware contrib
-		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+    # Configure apt sources
+        cat > /etc/apt/sources.list.d/debian.sources #<<-EOF_APT
+        Types: deb deb-src
+        URIs: http://deb.debian.org/debian/
+        Suites: trixie trixie-updates
+        Components: main non-free-firmware contrib
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-		Types: deb deb-src
-		URIs: http://security.debian.org/debian-security/
-		Suites: trixie-security
-		Components: main non-free-firmware contrib
-		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-		EOF_APT
+        Types: deb deb-src
+        URIs: http://security.debian.org/debian-security/
+        Suites: trixie-security
+        Components: main non-free-firmware contrib
+        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+        EOF_APT
 
-	# Update and install necessary packages
-	export DEBIAN_FRONTEND=noninteractive
-	apt update
-	apt install -y locales linux-headers-$KERNEL_VERSION linux-image-amd64 dkms
-	
-	apt install -y zfsutils-linux
-	
-	apt install -y zfs-dkms zfs-initramfs dosfstools efibootmgr curl
-	
-	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
-	
-	# Install system utilities
-	echo "Installing system utilities..."
-	apt install -y systemd-timesyncd net-tools iproute2 isc-dhcp-client iputils-ping traceroute curl wget dnsutils ethtool ifupdown tcpdump nmap nano vim htop openssh-server git tmux
-	
-	# Perform system upgrade
-	echo "Running dist-upgrade to upgrade all packages to the latest version..."
-	apt full-upgrade -y
-	
-	# Set locale and timezone
-	echo "Configuring locale and timezone..."
-	echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-	locale-gen
-	dpkg-reconfigure -f noninteractive tzdata
-	
-	# Set root password
-	echo "Setting root password..."
-	echo "root:$ROOT_PASSWORD" | chpasswd
-	
-	# Create user and set password
-	echo "Creating user and setting permissions..."
-	useradd -m -s /bin/bash -G sudo,audio,cdrom,dip,floppy,netdev,plugdev,video $USERNAME
-	echo "$USERNAME:$USER_PASSWORD" | chpasswd
-	
-	# Enable systemd ZFS services
-	echo "Enabling systemd ZFS services..."
-	systemctl enable zfs.target
-	systemctl enable zfs-import-cache
-	systemctl enable zfs-mount
-	systemctl enable zfs-import.target
-	
-	# Rebuild initramfs
-	echo "Rebuilding initramfs..."
-	update-initramfs -c -k all
-	
-	# Set ZFSBootMenu command-line arguments for inherited ZFS properties
-	echo "Configuring ZFSBootMenu command-line arguments..."
-	zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
-	
-	# Set up EFI filesystem
-	echo "Setting up EFI filesystem..."
-	mkfs.vfat -F32 ${BOOT_DISK}p${BOOT_PART}
-	
-	# Configure fstab entry for EFI
-	echo "Configuring fstab for EFI partition..."
-		cat <<-EOF_FSTAB >> /etc/fstab
-		$(blkid | grep "${BOOT_DISK}p${BOOT_PART}" | cut -d ' ' -f 2) /boot/efi vfat defaults 0 0
-		EOF_FSTAB
-	
-	# Mount EFI partition
-	mkdir -p /boot/efi
-	mount /boot/efi
-	
-	# Install ZFSBootMenu
-	echo "Installing ZFSBootMenu..."
-	mkdir -p /boot/efi/EFI/ZBM
- 	mkdir -p /boot/efi/EFI/BOOT
-	curl -o /boot/efi/EFI/ZBM/VMLINUZ.EFI -L https://get.zfsbootmenu.org/efi
-	cp /boot/efi/EFI/ZBM/VMLINUZ.EFI /boot/efi/EFI/ZBM/VMLINUZ-BACKUP.EFI
-	cp /boot/efi/EFI/ZBM/VMLINUZ.EFI /boot/efi/EFI/BOOT/bootx64.efi  # Default path if needed
-	
-	# Mount EFI variables if needed
-	echo "Mounting efivarfs for boot entry setup..."
-	mount -t efivarfs efivarfs /sys/firmware/efi/efivars
-	
-	# Install and configure EFI boot manager
-	apt install -y efibootmgr
-	echo "Configuring EFI boot entries..."
-	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
-	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
-	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
-	
-	# Perform a distribution upgrade
-	echo "Running dist-upgrade to upgrade all packages to the latest version..."
-	apt full-upgrade -y
-	
-	# add full debian setup (tasksel)
-	echo "tasksel"
-	tasksel install standard
-	
-	EOF
+    # Update and install necessary packages
+    export DEBIAN_FRONTEND=noninteractive
+    apt update
+    apt install -y locales linux-headers-$KERNEL_VERSION linux-image-amd64 dkms
+
+    apt install -y zfsutils-linux
+
+    apt install -y zfs-dkms zfs-initramfs dosfstools efibootmgr curl
+
+    echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
+
+    # Install system utilities
+    echo "Installing system utilities..."
+    apt install -y systemd-timesyncd net-tools iproute2 isc-dhcp-client iputils-ping traceroute curl wget dnsutils ethtool ifupdown tcpdump nmap nano vim htop openssh-server git tmux
+
+    # Perform system upgrade
+    echo "Running dist-upgrade to upgrade all packages to the latest version..."
+    apt full-upgrade -y
+
+    # Set locale and timezone
+    echo "Configuring locale and timezone..."
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+    locale-gen
+    dpkg-reconfigure -f noninteractive tzdata
+
+    # Set root password
+    echo "Setting root password..."
+    echo "root:$ROOT_PASSWORD" | chpasswd
+
+    # Create user and set password
+    echo "Creating user and setting permissions..."
+    useradd -m -s /bin/bash -G sudo,audio,cdrom,dip,floppy,netdev,plugdev,video $USERNAME
+    echo "$USERNAME:$USER_PASSWORD" | chpasswd
+
+    # Enable systemd ZFS services
+    echo "Enabling systemd ZFS services..."
+    systemctl enable zfs.target
+    systemctl enable zfs-import-cache
+    systemctl enable zfs-mount
+    systemctl enable zfs-import.target
+
+    # Rebuild initramfs
+    echo "Rebuilding initramfs..."
+    update-initramfs -c -k all
+
+    # Set ZFSBootMenu command-line arguments for inherited ZFS properties
+    echo "Configuring ZFSBootMenu command-line arguments..."
+    zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
+
+    # Set up EFI filesystem
+    echo "Setting up EFI filesystem..."
+    mkfs.vfat -F32 ${BOOT_DISK}p${BOOT_PART}
+
+    # Configure fstab entry for EFI
+    echo "Configuring fstab for EFI partition..."
+        cat #<<-EOF_FSTAB >> /etc/fstab
+        $(blkid | grep "${BOOT_DISK}p${BOOT_PART}" | cut -d ' ' -f 2) /boot/efi vfat defaults 0 0
+        EOF_FSTAB
+
+    # Mount EFI partition
+    mkdir -p /boot/efi
+    mount /boot/efi
+
+    # Install ZFSBootMenu
+    echo "Installing ZFSBootMenu..."
+    mkdir -p /boot/efi/EFI/ZBM
+    mkdir -p /boot/efi/EFI/BOOT
+    curl -o /boot/efi/EFI/ZBM/VMLINUZ.EFI -L https://get.zfsbootmenu.org/efi
+    cp /boot/efi/EFI/ZBM/VMLINUZ.EFI /boot/efi/EFI/ZBM/VMLINUZ-BACKUP.EFI
+    cp /boot/efi/EFI/ZBM/VMLINUZ.EFI /boot/efi/EFI/BOOT/bootx64.efi  # Default path if needed
+
+    # Mount EFI variables if needed
+    echo "Mounting efivarfs for boot entry setup..."
+    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+
+    # Install and configure EFI boot manager
+    apt install -y efibootmgr
+    echo "Configuring EFI boot entries..."
+    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
+    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
+    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
+
+    # Perform a distribution upgrade
+    echo "Running dist-upgrade to upgrade all packages to the latest version..."
+    apt full-upgrade -y
+
+    # add full debian setup (tasksel)
+    echo "tasksel"
+    tasksel install standard
+
+    EOF
 }
 
 cleanup_chroot() {
-  echo "Cleaning up chroot environment..."
-  umount -l $MOUNT_POINT/dev/pts
-  umount -l $MOUNT_POINT/dev
-  umount -l $MOUNT_POINT/sys
-  umount -l $MOUNT_POINT/proc
+    echo "Cleaning up chroot environment..."
+    umount -l $MOUNT_POINT/dev/pts
+    umount -l $MOUNT_POINT/dev
+    umount -l $MOUNT_POINT/sys
+    umount -l $MOUNT_POINT/proc
 }
 
 final_cleanup() {
-  echo "Exporting ZFS pool and completing installation..."
-  mount | grep -v zfs | tac | awk '/\/mnt/ {print $3}' | \
-    xargs -i{} umount -lf {}
-  zpool export -a
+    echo "Exporting ZFS pool and completing installation..."
+    mount | grep -v zfs | tac | awk '/\/mnt/ {print $3}' | \
+        xargs -i{} umount -lf {}
+    zpool export -a
 }
 
 # Execution sequence
@@ -261,12 +257,10 @@ echo "Current kernel version is: $KERNEL_VERSION"
 echo "OS ID from /etc/os-release is: $ID"
 select_disk
 get_username_and_password
-generate_hostid
 configure_apt_sources
 install_host_packages
 partition_disk
 create_zpool
-export_import_zpool
 setup_base_system
 prepare_chroot
 enter_chroot
