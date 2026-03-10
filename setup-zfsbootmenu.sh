@@ -113,18 +113,15 @@ select_network_interface() {
 
 configure_apt_sources() {
   echo "Configuring APT sources..."
-  cat > /etc/apt/sources.list.d/debian.sources <<EOF
-Types: deb deb-src
-URIs: http://deb.debian.org/debian/
-Suites: trixie trixie-updates
-Components: main non-free-firmware contrib
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+  cat > /etc/apt/sources.list <<EOF
+deb http://deb.debian.org/debian trixie main contrib non-free-firmware
+deb-src http://deb.debian.org/debian trixie main contrib non-free-firmware
 
-Types: deb deb-src
-URIs: http://security.debian.org/debian-security/
-Suites: trixie-security
-Components: main non-free-firmware contrib
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+deb http://deb.debian.org/debian-security trixie-security main contrib non-free-firmware
+deb-src http://deb.debian.org/debian-security/ trixie-security main contrib non-free-firmware
+
+deb http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
+deb-src http://deb.debian.org/debian trixie-updates main contrib non-free-firmware
 EOF
 }
 
