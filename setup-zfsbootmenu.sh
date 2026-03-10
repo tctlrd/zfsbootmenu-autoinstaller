@@ -212,7 +212,6 @@ enter_chroot() {
 	echo "Entering chroot environment to configure system..."
 	chroot $MNT_P /bin/bash <<-EOF
 
-
 	# Set hostname
 	echo "$HOSTNAME" > /etc/hostname
 	echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
@@ -223,6 +222,7 @@ enter_chroot() {
 	echo "$SSH_KEY" > /root/.ssh/authorized_keys
 	chmod 700 /root/.ssh
 	chmod 600 /root/.ssh/authorized_keys
+	rm /etc/apt/sources.list
 	# Configure apt sources
 		cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
 		Types: deb deb-src
@@ -246,22 +246,17 @@ enter_chroot() {
 	echo "Configuring locale and timezone."
 	echo "$LANG UTF-8" > /etc/locale.gen
 	ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-	apt install -y locales tzdata
+	apt install -y locales console-setup
 	update-locale LANG=$LANG
 
 	# Install kernel and ZFS packages
 	echo "Installing kernel and ZFS packages..."
-	apt install -y locales linux-headers-amd64 linux-image-amd64 zfs-initramfs dosfstools
+	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs dosfstools
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 
 	# Set root password
 	echo "Setting root password."
 	echo "root:$ROOT_PASSWORD" | chpasswd
-
-	# Configure network
-	echo "Configuring network for DHCP on $NET_IF."
-	echo "auto $NET_IF" >> /etc/network/interfaces
-	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 
 	# Enable systemd ZFS services
 	echo "Enabling systemd ZFS services..."
@@ -370,10 +365,11 @@ enter_chroot() {
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
-
-	# Perform a distribution upgrade
-	echo "Running dist-upgrade to upgrade all packages to the latest version."
-	apt full-upgrade -y
+	
+	# Configure network
+	echo "Configuring network for DHCP on $NET_IF."
+	echo "auto $NET_IF" >> /etc/network/interfaces
+	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 	EOF
 }
 
