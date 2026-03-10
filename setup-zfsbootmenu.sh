@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Optionally set variables
+LANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore_instead of space
 NET_IF=""
 ROOT_PASSWORD=""
@@ -227,11 +228,10 @@ enter_chroot() {
 
   # Set locale and timezone
   echo "Configuring locale and timezone."
-  echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+  echo "$LANG UTF-8" > /etc/locale.gen
   ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
   apt install -y locales tzdata
-  update-locale LANG=en_US.UTF-8
-  apt install -y keyboard-configuration console-setup
+  update-locale LANG=$LANG
 
   # Install kernel and ZFS packages
   echo "Installing kernel and ZFS packages..."
