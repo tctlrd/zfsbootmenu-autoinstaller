@@ -47,7 +47,7 @@ set_credentials(){
 
 select_disk() {
   # Check if disk is already selected
-  if [[ -n "$BOOT_DEVICE" && -n "$POOL_DEVICE" ]]; then
+  if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
     echo "Boot device is set to $BOOT_DEVICE"
     echo "Pool device is set to $POOL_DEVICE"
     return
