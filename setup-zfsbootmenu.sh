@@ -133,6 +133,7 @@ EOF
 install_host_packages() {
   echo "Installing necessary packages"
   apt update
+	apt full-upgrade -y
   apt install -y debootstrap gdisk dkms linux-headers-$(uname -r)
   apt install -y zfsutils-linux
 }
