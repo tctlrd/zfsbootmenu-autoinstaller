@@ -141,8 +141,19 @@ partition_disk() {
   sgdisk --zap-all "$BOOT_DISK"
   sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
   sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
-  lsblk
-  ls -l /dev/disk/by-id/
+  sleep 2
+  ls -1 /dev/disk/by-id
+	count=0
+	while [ ! -e "$POOL_DEVICE" ]; do
+		echo "Waiting for pool device to appear: $POOL_DEVICE"
+		sleep 1
+		count=$((count + 1))
+		if [ $count -ge 5 ]; then
+			echo "Timeout waiting for pool device"
+			exit 1
+		fi
+	done
+	echo "Pool device found: $POOL_DEVICE"
 }
 
 create_zpool() {
