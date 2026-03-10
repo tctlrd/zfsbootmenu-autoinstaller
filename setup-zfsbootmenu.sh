@@ -2,7 +2,7 @@
 
 # Optionally set variables
 LANG=en_US.UTF-8
-TIMEZONE="America/Chicago" # timezone variable demands underscore_instead of space
+TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
 #NET_IF=""
 #ROOT_PASSWORD=""
 #ENC_PHRASE=""
