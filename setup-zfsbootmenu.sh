@@ -71,244 +71,244 @@ EOF
 }
 
 install_host_packages() {
-    echo "Installing necessary packages"
-    apt update
-    apt install -y debootstrap gdisk dkms linux-headers-$(uname -r)
-    apt install -y zfsutils-linux
+  echo "Installing necessary packages"
+  apt update
+  apt install -y debootstrap gdisk dkms linux-headers-$(uname -r)
+  apt install -y zfsutils-linux
 }
 
 partition_disk() {
-    zgenhostid -f 0x00bab10c
-    zpool labelclear -f "$POOL_DISK"
-    wipefs -a "$POOL_DISK"
-    wipefs -a "$BOOT_DISK"
-    sgdisk --zap-all "$POOL_DISK"
-    sgdisk --zap-all "$BOOT_DISK"
-    sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
-    sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
+  zgenhostid -f 0x00bab10c
+  zpool labelclear -f "$POOL_DISK"
+  wipefs -a "$POOL_DISK"
+  wipefs -a "$BOOT_DISK"
+  sgdisk --zap-all "$POOL_DISK"
+  sgdisk --zap-all "$BOOT_DISK"
+  sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
+  sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
 }
 
 create_zpool() {
-    echo "$ENC_PHRASE" > /etc/zfs/zroot.key
-    chmod 000 /etc/zfs/zroot.key
-    echo "Creating ZFS pool and datasets..."
-    zpool create -f -o ashift=12 \
-    -O compression=lz4 \
-    -O acltype=posixacl \
-    -O xattr=sa \
-    -O relatime=on \
-    -O encryption=aes-256-gcm \
-    -O keylocation=file:///etc/zfs/zroot.key \
-    -O keyformat=passphrase \
-    -o autotrim=on \
-    -o compatibility=openzfs-2.2-linux \
-    -m none zroot "$POOL_DEVICE"
-    zfs create -o mountpoint=none $POOL_NAME/ROOT
-    zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
-    zfs create -o mountpoint=/home $POOL_NAME/home
-    zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
+  echo "$ENC_PHRASE" > /etc/zfs/zroot.key
+  chmod 000 /etc/zfs/zroot.key
+  echo "Creating ZFS pool and datasets..."
+  zpool create -f -o ashift=12 \
+  -O compression=lz4 \
+  -O acltype=posixacl \
+  -O xattr=sa \
+  -O relatime=on \
+  -O encryption=aes-256-gcm \
+  -O keylocation=file:///etc/zfs/zroot.key \
+  -O keyformat=passphrase \
+  -o autotrim=on \
+  -o compatibility=openzfs-2.2-linux \
+  -m none zroot "$POOL_DEVICE"
+  zfs create -o mountpoint=none $POOL_NAME/ROOT
+  zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
+  zfs create -o mountpoint=/home $POOL_NAME/home
+  zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
 }
 
 export_import_zpool() {
-    echo "Exporting and re-importing ZFS pool for mounting..."
-    zpool export zroot
-    zpool import -N -R $MNT_P zroot
-    zfs load-key -L file:///etc/zfs/zroot.key zroot
-    zfs mount zroot/ROOT/${ID}
-    zfs mount zroot/home
-    udevadm trigger
+  echo "Exporting and re-importing ZFS pool for mounting..."
+  zpool export zroot
+  zpool import -N -R $MNT_P zroot
+  zfs load-key -L file:///etc/zfs/zroot.key zroot
+  zfs mount zroot/ROOT/${ID}
+  zfs mount zroot/home
+  udevadm trigger
 }
 
 setup_base_system() {
-    echo "Installing base system with debootstrap..."
-    debootstrap trixie $MNT_P
-    cp /etc/hostid $MNT_P/etc/hostid
-    cp /etc/resolv.conf $MNT_P/etc/resolv.conf
-    mkdir $MNT_P/etc/zfs
-    cp /etc/zfs/zroot.key $MNT_P/etc/zfs
-    
-    # Copy SSH keys if they exist
-    if [ -f /root/.ssh/authorized_keys ]; then
-        mkdir -p $MNT_P/root/.ssh
-        cp /root/.ssh/authorized_keys $MNT_P/root/.ssh
-    fi
+  echo "Installing base system with debootstrap..."
+  debootstrap trixie $MNT_P
+  cp /etc/hostid $MNT_P/etc/hostid
+  cp /etc/resolv.conf $MNT_P/etc/resolv.conf
+  mkdir $MNT_P/etc/zfs
+  cp /etc/zfs/zroot.key $MNT_P/etc/zfs
+  
+  # Copy SSH keys if they exist
+  if [ -f /root/.ssh/authorized_keys ]; then
+      mkdir -p $MNT_P/root/.ssh
+      cp /root/.ssh/authorized_keys $MNT_P/root/.ssh
+  fi
 }
 
 prepare_chroot() {
-    echo "Mounting filesystems for chroot environment..."
-    mount -t proc proc $MNT_P/proc
-    mount -t sysfs sys $MNT_P/sys
-    mount -B /dev $MNT_P/dev
-    mount -t devpts pts $MNT_P/dev/pts
+  echo "Mounting filesystems for chroot environment..."
+  mount -t proc proc $MNT_P/proc
+  mount -t sysfs sys $MNT_P/sys
+  mount -B /dev $MNT_P/dev
+  mount -t devpts pts $MNT_P/dev/pts
 }
 
 enter_chroot() {
-    echo "Entering chroot environment to configure system..."
-    chroot $MNT_P /bin/bash <<-EOF
-    # Set hostname
-    echo "$HOSTNAME" > /etc/hostname
-    echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
+  echo "Entering chroot environment to configure system..."
+  chroot $MNT_P /bin/bash <<-EOF
+  # Set hostname
+  echo "$HOSTNAME" > /etc/hostname
+  echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
 
-    # Configure apt sources
-        cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
-        Types: deb deb-src
-        URIs: http://deb.debian.org/debian/
-        Suites: trixie trixie-updates
-        Components: main non-free-firmware contrib
-        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+  # Configure apt sources
+    cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
+    Types: deb deb-src
+    URIs: http://deb.debian.org/debian/
+    Suites: trixie trixie-updates
+    Components: main non-free-firmware contrib
+    Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-        Types: deb deb-src
-        URIs: http://security.debian.org/debian-security/
-        Suites: trixie-security
-        Components: main non-free-firmware contrib
-        Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-        EOF_APT
+    Types: deb deb-src
+    URIs: http://security.debian.org/debian-security/
+    Suites: trixie-security
+    Components: main non-free-firmware contrib
+    Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+    EOF_APT
 
-    # Update and install necessary packages
-    export DEBIAN_FRONTEND=noninteractive
-    apt update
+  # Update and install necessary packages
+  export DEBIAN_FRONTEND=noninteractive
+  apt update
 
-    # Set locale and timezone
-    echo "Configuring locale and timezone."
-    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-    ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
-    apt install -y locales tzdata
-    update-locale LANG=en_US.UTF-8
-    apt install -y keyboard-configuration console-setup
+  # Set locale and timezone
+  echo "Configuring locale and timezone."
+  echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+  ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+  apt install -y locales tzdata
+  update-locale LANG=en_US.UTF-8
+  apt install -y keyboard-configuration console-setup
 
-    # Install kernel and ZFS packages
-    echo "Installing kernel and ZFS packages..."
-    apt install -y locales linux-headers-amd64 linux-image-amd64 zfs-initramfs dosfstools
-    echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
+  # Install kernel and ZFS packages
+  echo "Installing kernel and ZFS packages..."
+  apt install -y locales linux-headers-amd64 linux-image-amd64 zfs-initramfs dosfstools
+  echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 
-    # Set root password
-    echo "Setting root password."
-    echo "root:$ROOT_PASSWORD" | chpasswd
+  # Set root password
+  echo "Setting root password."
+  echo "root:$ROOT_PASSWORD" | chpasswd
 
-    # Configure network
-    echo "Configuring network."
-    echo "auto $NET_IF" >> /etc/network/interfaces
-    echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
+  # Configure network
+  echo "Configuring network."
+  echo "auto $NET_IF" >> /etc/network/interfaces
+  echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 
-    # Enable systemd ZFS services
-    echo "Enabling systemd ZFS services..."
-    systemctl enable zfs.target
-    systemctl enable zfs-import-cache
-    systemctl enable zfs-mount
-    systemctl enable zfs-import.target
+  # Enable systemd ZFS services
+  echo "Enabling systemd ZFS services..."
+  systemctl enable zfs.target
+  systemctl enable zfs-import-cache
+  systemctl enable zfs-mount
+  systemctl enable zfs-import.target
 
-    # Rebuild initramfs
-    echo "Rebuilding initramfs..."
-    echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
-    update-initramfs -c -k all
+  # Rebuild initramfs
+  echo "Rebuilding initramfs..."
+  echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
+  update-initramfs -c -k all
 
-    # Set ZFSBootMenu command-line arguments for inherited ZFS properties
-    echo "Configuring ZFSBootMenu command-line arguments..."
-    zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
-    zfs set org.zfsbootmenu:keysource="$POOL_NAME/ROOT/$ID" $POOL_NAME
-    
-    # Set up EFI filesystem
-    echo "Setting up EFI filesystem..."
-    mkfs.vfat -F32 "$BOOT_DEVICE"
+  # Set ZFSBootMenu command-line arguments for inherited ZFS properties
+  echo "Configuring ZFSBootMenu command-line arguments..."
+  zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
+  zfs set org.zfsbootmenu:keysource="$POOL_NAME/ROOT/$ID" $POOL_NAME
+  
+  # Set up EFI filesystem
+  echo "Setting up EFI filesystem..."
+  mkfs.vfat -F32 "$BOOT_DEVICE"
 
-    # Configure fstab entry for EFI
-    echo "Configuring fstab for EFI partition..."
-        cat <<-EOF_FSTAB >> /etc/fstab
-        $( blkid | grep "$BOOT_DEVICE" | cut -d ' ' -f 2 ) /boot/efi vfat defaults 0 0
-        EOF_FSTAB
+  # Configure fstab entry for EFI
+  echo "Configuring fstab for EFI partition..."
+    cat <<-EOF_FSTAB >> /etc/fstab
+    $( blkid | grep "$BOOT_DEVICE" | cut -d ' ' -f 2 ) /boot/efi vfat defaults 0 0
+    EOF_FSTAB
 
-    # Mount EFI partition
-    mkdir -p /boot/efi
-    mount /boot/efi
+  # Mount EFI partition
+  mkdir -p /boot/efi
+  mount /boot/efi
 
-    # Install ZFSBootMenu
-    echo "Installing dependencies for ZFSBootMenu..."
-    apt install -y --no-install-recommends \
-        libsort-versions-perl \
-        libboolean-perl \
-        libyaml-pp-perl \
-        git \
-        fzf \
-        curl \
-        mbuffer \
-        kexec-tools \
-        efibootmgr \
-        systemd-boot-efi \
-        bsdextrautils \
-        dracut-network \
-        isc-dhcp-client \
-        ssh \
-        dropbear-bin
+  # Install ZFSBootMenu
+  echo "Installing dependencies for ZFSBootMenu..."
+  apt install -y --no-install-recommends \
+    libsort-versions-perl \
+    libboolean-perl \
+    libyaml-pp-perl \
+    git \
+    fzf \
+    curl \
+    mbuffer \
+    kexec-tools \
+    efibootmgr \
+    systemd-boot-efi \
+    bsdextrautils \
+    dracut-network \
+    isc-dhcp-client \
+    ssh \
+    dropbear-bin
 
-    # Install ZFSBootMenu
-    echo "Installing ZFSBootMenu."
-    mkdir -p /usr/local/src/zfsbootmenu
-    cd /usr/local/src/zfsbootmenu
-    curl -L https://get.zfsbootmenu.org/source | tar -zxv --strip-components=1 -f -
-    make core dracut
+  # Install ZFSBootMenu
+  echo "Installing ZFSBootMenu."
+  mkdir -p /usr/local/src/zfsbootmenu
+  cd /usr/local/src/zfsbootmenu
+  curl -L https://get.zfsbootmenu.org/source | tar -zxv --strip-components=1 -f -
+  make core dracut
 
-    # Install dracut-crypt-ssh
-    echo "Installing dracut-crypt-ssh."
-    git -C /tmp clone 'https://github.com/dracut-crypt-ssh/dracut-crypt-ssh'
-    rm /tmp/dracut-crypt-ssh/modules/60crypt-ssh/Makefile
-    rm -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh/helper
-    sed -i '/inst \"\$moddir/s/^\(.*\)$/#&/' /tmp/dracut-crypt-ssh/modules/60crypt-ssh/module-setup.sh
-    cp -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh /usr/lib/dracut/modules.d
+  # Install dracut-crypt-ssh
+  echo "Installing dracut-crypt-ssh."
+  git -C /tmp clone 'https://github.com/dracut-crypt-ssh/dracut-crypt-ssh'
+  rm /tmp/dracut-crypt-ssh/modules/60crypt-ssh/Makefile
+  rm -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh/helper
+  sed -i '/inst \"\$moddir/s/^\(.*\)$/#&/' /tmp/dracut-crypt-ssh/modules/60crypt-ssh/module-setup.sh
+  cp -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh /usr/lib/dracut/modules.d
 
-    # Configure dracut for network and dropbear
-    echo "Configuring dracut for network and dropbear."
-    mkdir -p /etc/cmdline.d
-    echo "ip=dhcp rd.neednet=1" > /etc/cmdline.d/dracut-network.conf
-    mkdir -p /etc/dropbear
-    for keytype in rsa ecdsa ed25519; do
-    ssh-keygen -g -N "" -m PEM -t "${keytype}" -f "/etc/dropbear/ssh_host_${keytype}_key"
-    done
-    ln -s "/root/.ssh/authorized_keys" /etc/dropbear/root_key
+  # Configure dracut for network and dropbear
+  echo "Configuring dracut for network and dropbear."
+  mkdir -p /etc/cmdline.d
+  echo "ip=dhcp rd.neednet=1" > /etc/cmdline.d/dracut-network.conf
+  mkdir -p /etc/dropbear
+  for keytype in rsa ecdsa ed25519; do
+  ssh-keygen -g -N "" -m PEM -t "${keytype}" -f "/etc/dropbear/ssh_host_${keytype}_key"
+  done
+  ln -s "/root/.ssh/authorized_keys" /etc/dropbear/root_key
 
-    # Writing dracut.conf.d/...
-    echo "Writing dracut.conf.d/..."
-        cat <<-EOF_DRACUT | tee /etc/zfsbootmenu/dracut.conf.d/dropbear.conf > /dev/null
-        add_dracutmodules+=" crypt-ssh "
-        install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
-        dropbear_acl=/root/.ssh/authorized_keys
-        dropbear_rsa_key=/etc/dropbear/ssh_host_rsa_key
-        dropbear_ecdsa_key=/etc/dropbear/ssh_host_ecdsa_key
-        dropbear_acl=/etc/dropbear/root_key
-        EOF_DRACUT
-    echo 'omit_dracutmodules+=" crypt-ssh "' > /etc/dracut.conf.d/no-crypt-ssh.conf
+  # Writing dracut.conf.d/...
+  echo "Writing dracut.conf.d/..."
+    cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
+    add_dracutmodules+=" crypt-ssh "
+    install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
+    dropbear_acl=/root/.ssh/authorized_keys
+    dropbear_rsa_key=/etc/dropbear/ssh_host_rsa_key
+    dropbear_ecdsa_key=/etc/dropbear/ssh_host_ecdsa_key
+    dropbear_acl=/etc/dropbear/root_key
+    EOF_DRACUT
+  echo 'omit_dracutmodules+=" crypt-ssh "' > /etc/dracut.conf.d/no-crypt-ssh.conf
 
-    # Configure ZFSBootMenu
-    echo "Configuring ZFSBootMenu."
-    sed -i -e 's/^  ManageImages: false$/  ManageImages: true/' \
-        -e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
-        -e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
-        /etc/zfsbootmenu/config.yaml
+  # Configure ZFSBootMenu
+  echo "Configuring ZFSBootMenu."
+  sed -i -e 's/^  ManageImages: false$/  ManageImages: true/' \
+      -e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
+      -e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
+      /etc/zfsbootmenu/config.yaml
 
-    # Generate ZFSBootMenu
-    echo "Generating ZFSBootMenu."
-    generate-zbm
+  # Generate ZFSBootMenu
+  echo "Generating ZFSBootMenu."
+  generate-zbm
 
-    # Mount EFI variables if needed
-    echo "Mounting efivarfs for boot entry setup..."
-    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+  # Mount EFI variables if needed
+  echo "Mounting efivarfs for boot entry setup..."
+  mount -t efivarfs efivarfs /sys/firmware/efi/efivars
 
-    # Configure EFI boot entries
-    echo "Configuring EFI boot entries..."
-    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
-    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
-    efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
+  # Configure EFI boot entries
+  echo "Configuring EFI boot entries..."
+  efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
+  efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
+  efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
 
-    # Perform a distribution upgrade
-    echo "Running dist-upgrade to upgrade all packages to the latest version."
-    apt full-upgrade -y
+  # Perform a distribution upgrade
+  echo "Running dist-upgrade to upgrade all packages to the latest version."
+  apt full-upgrade -y
 
-    EOF
+  EOF
 }
 
 final_cleanup() {
-    echo "Exporting ZFS pool and completing installation..."
-    umount -n -R /mnt
-    zpool export -a
+  echo "Exporting ZFS pool and completing installation..."
+  umount -n -R /mnt
+  zpool export -a
 }
 
 # Execution sequence
