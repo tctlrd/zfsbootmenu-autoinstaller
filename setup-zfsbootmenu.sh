@@ -3,11 +3,11 @@
 # Optionally set variables
 LANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore_instead of space
-NET_IF=""
-ROOT_PASSWORD=""
-ENC_PHRASE=""
-SSH_KEY=""
-HOSTNAME=""
+#NET_IF=""
+#ROOT_PASSWORD=""
+#ENC_PHRASE=""
+#SSH_KEY=""
+#HOSTNAME=""
 
 # Use /dev/disk/by-id/ for persistent device naming or
 # remove use empty PART_SUF var for /dev/sdX1 format
