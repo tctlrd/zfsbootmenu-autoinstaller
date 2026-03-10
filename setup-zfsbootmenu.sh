@@ -10,7 +10,7 @@ TIMEZONE="America/Chicago" # timezone variable demands underscore_instead of spa
 #HOSTNAME=""
 
 # Use /dev/disk/by-id/ for persistent device naming or
-# remove use empty PART_SUF var for /dev/sdX1 format
+# use PART_SUF="" (empty) var for /dev/sdX1 format
 BOOT_DISK=""
 POOL_DISK=""
 BOOT_PART="1"
