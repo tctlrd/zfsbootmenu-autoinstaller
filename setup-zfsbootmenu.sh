@@ -176,7 +176,7 @@ create_zpool() {
   -O keyformat=passphrase \
   -o autotrim=on \
   -o compatibility=openzfs-2.2-linux \
-  -m none $POOL_NAME $POOL_DEVICE
+  -m none $POOL_NAME "$POOL_DEVICE"
   zfs create -o mountpoint=none $POOL_NAME/ROOT
   zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
   zfs create -o mountpoint=/home $POOL_NAME/home
