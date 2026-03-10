@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Automatically set other variables
+TIMEZONE="America/Chicago"
 BOOT_DISK="/dev/vda"
 BOOT_PART="1"
 POOL_DISK="/dev/vda"
 POOL_PART="2"
 POOL_NAME="zroot"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
-MOUNT_POINT="/mnt"
+MNT_P="/mnt"
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 export DEBIAN_FRONTEND=noninteractive
 
@@ -106,24 +107,36 @@ create_zpool() {
     zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
 }
 
+export_import_zpool() {
+    echo "Exporting and re-importing ZFS pool for mounting..."
+    zpool export zroot
+    zpool import -N -R $MNT_P zroot
+    zfs load-key -L file:///etc/zfs/zroot.key zroot
+    zfs mount zroot/ROOT/${ID}
+    zfs mount zroot/home
+    udevadm trigger
+}
+
 setup_base_system() {
     echo "Installing base system with debootstrap..."
-    debootstrap trixie $MOUNT_POINT
-    cp /etc/hostid $MOUNT_POINT/etc/hostid
-    cp /etc/resolv.conf $MOUNT_POINT/etc/resolv.conf
+    debootstrap trixie $MNT_P
+    cp /etc/hostid $MNT_P/etc/hostid
+    cp /etc/resolv.conf $MNT_P/etc/resolv.conf
+    mkdir $MNT_P/etc/zfs
+    cp /etc/zfs/zroot.key $MNT_P/etc/zfs
 }
 
 prepare_chroot() {
     echo "Mounting filesystems for chroot environment..."
-    mount -t proc proc $MOUNT_POINT/proc
-    mount -t sysfs sys $MOUNT_POINT/sys
-    mount -B /dev $MOUNT_POINT/dev
-    mount -t devpts pts $MOUNT_POINT/dev/pts
+    mount -t proc proc $MNT_P/proc
+    mount -t sysfs sys $MNT_P/sys
+    mount -B /dev $MNT_P/dev
+    mount -t devpts pts $MNT_P/dev/pts
 }
 
 enter_chroot() {
     echo "Entering chroot environment to configure system..."
-    chroot $MOUNT_POINT /bin/bash #<<-EOF
+    chroot $MNT_P /bin/bash #<<-EOF
     # Set hostname
     echo "$HOSTNAME" > /etc/hostname
     echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
@@ -146,27 +159,29 @@ enter_chroot() {
     # Update and install necessary packages
     export DEBIAN_FRONTEND=noninteractive
     apt update
+
+    # Set locale and timezone
+    echo "Configuring locale and timezone."
+    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+    ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
+    apt install -y locales tzdata
+    update-locale LANG=en_US.UTF-8
+    apt install -y keyboard-configuration console-setup
+
+    # Install kernel and ZFS packages
+    echo "Installing kernel and ZFS packages..."
     apt install -y locales linux-headers-$KERNEL_VERSION linux-image-amd64 dkms
-
     apt install -y zfsutils-linux
-
     apt install -y zfs-dkms zfs-initramfs dosfstools efibootmgr curl
-
     echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 
     # Install system utilities
     echo "Installing system utilities..."
-    apt install -y systemd-timesyncd net-tools iproute2 isc-dhcp-client iputils-ping traceroute curl wget dnsutils ethtool ifupdown tcpdump nmap nano vim htop openssh-server git tmux
+    apt install -y isc-dhcp-client curl
 
     # Perform system upgrade
     echo "Running dist-upgrade to upgrade all packages to the latest version..."
     apt full-upgrade -y
-
-    # Set locale and timezone
-    echo "Configuring locale and timezone..."
-    echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-    locale-gen
-    dpkg-reconfigure -f noninteractive tzdata
 
     # Set root password
     echo "Setting root password..."
@@ -238,10 +253,10 @@ enter_chroot() {
 
 cleanup_chroot() {
     echo "Cleaning up chroot environment..."
-    umount -l $MOUNT_POINT/dev/pts
-    umount -l $MOUNT_POINT/dev
-    umount -l $MOUNT_POINT/sys
-    umount -l $MOUNT_POINT/proc
+    umount -l $MNT_P/dev/pts
+    umount -l $MNT_P/dev
+    umount -l $MNT_P/sys
+    umount -l $MNT_P/proc
 }
 
 final_cleanup() {
