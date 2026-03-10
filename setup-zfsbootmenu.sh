@@ -27,7 +27,7 @@ ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 # optionally override variables with those from install.env file
 if [ -f "install.env" ]; then
     source install.env
-    echo "Loaded configuration from install.env"
+    echo "LOG: Loaded configuration from install.env"
 fi
 export DEBIAN_FRONTEND=noninteractive
 
@@ -55,11 +55,11 @@ set_credentials(){
 select_disk() {
   # Check if disk is already selected
   if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
-    echo "Boot device is $BOOT_DEVICE"
-    echo "Pool device is $POOL_DEVICE"
+    echo "LOG: Boot device is $BOOT_DEVICE"
+    echo "LOG: Pool device is $POOL_DEVICE"
     return
   fi
-  echo "Available disks:"
+  echo "LOG: Available disks:"
   # List available disks with lsblk and store them in an array
   mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
 
@@ -78,24 +78,24 @@ select_disk() {
       POOL_DISK="/dev/disk/by-id/$selected_disk"
       BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
       POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
-      echo "Selected boot disk: $BOOT_DISK"
+      echo "LOG: Selected boot disk: $BOOT_DISK"
       break
     else
       echo "Invalid choice. Please select a number from the list."
     fi
   done
-  echo "Boot device is set to $BOOT_DEVICE"
-  echo "Pool device is set to $POOL_DEVICE"
+  echo "[[LOG]] Boot device is set to $BOOT_DEVICE"
+  echo "[[LOG]] Pool device is set to $POOL_DEVICE"
 }
 
 select_network_interface() {
   # Check if network interface is already selected
   if [[ -n "$NET_IF" ]]; then
-    echo "Network interface selected: $NET_IF"
+    echo "[[LOG]] Network interface selected: $NET_IF"
     return
   fi
   
-  echo "Available network interfaces:"
+  echo "[[LOG]] Available network interfaces:"
   # List available network interfaces and store them in an array
   mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
 
@@ -109,7 +109,7 @@ select_network_interface() {
     read -p "Enter the number of the network interface you want to use (e.g., 1): " choice
     if [[ $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
       NET_IF="${interfaces[$((choice - 1))]}"
-      echo "Selected network interface: $NET_IF"
+      echo "[[LOG]] Selected network interface: $NET_IF"
       break
     else
       echo "Invalid choice. Please select a number from the list."
@@ -159,13 +159,13 @@ partition_disk() {
       exit 1
     fi
   done
-  echo "Pool device found: $POOL_DEVICE"
+  echo "[[LOG]] Pool device found: $POOL_DEVICE"
   # Format boot partition early to get UUID
-  echo "Formatting boot partition..."
+  echo "[[LOG]] Formatting boot partition..."
   mkfs.vfat -F32 "$BOOT_DEVICE"
   # Get UUID after formatting
   BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
-  echo "Boot UUID after formatting: $BOOT_UUID"
+  echo "[[LOG]] Boot UUID after formatting: $BOOT_UUID"
 }
 
 create_zpool() {
@@ -190,13 +190,13 @@ create_zpool() {
 }
 
 export_import_zpool() {
-  echo "Exporting and re-importing ZFS pool for mounting..."
+  echo "[[LOG]] Exporting and re-importing ZFS pool for mounting..."
   zpool export $POOL_NAME
   zpool import -N -R $MNT_P $POOL_NAME
   zfs load-key -L file:///etc/zfs/zroot.key $POOL_NAME
   zfs mount $POOL_NAME/ROOT/${ID}
   zfs mount $POOL_NAME/home
-  echo "CURRENT MOUNTS:"
+  echo "[[LOG]] CURRENT MOUNTS:"
   mount | grep mnt
   udevadm trigger
 }
@@ -217,7 +217,7 @@ prepare_chroot() {
 }
 
 enter_chroot() {
-	echo "Entering chroot environment to configure system..."
+	echo "[[LOG]] Entering chroot environment to configure system..."
 	chroot $MNT_P /bin/bash <<-EOF
 
 	# Set hostname
@@ -293,7 +293,7 @@ enter_chroot() {
 	mount /boot/efi
 
 	# Install ZFSBootMenu
-	echo "Installing dependencies for ZFSBootMenu..."
+	echo "[[LOG]] Installing dependencies for ZFSBootMenu..."
 	apt install -y --no-install-recommends \
 	libsort-versions-perl \
 	libboolean-perl \
@@ -312,14 +312,14 @@ enter_chroot() {
 	dropbear-bin
 
 	# Install ZFSBootMenu
-	echo "Installing ZFSBootMenu."
+	echo "[[LOG]] Installing ZFSBootMenu."
 	mkdir -p /usr/local/src/zfsbootmenu
 	cd /usr/local/src/zfsbootmenu
 	curl -L https://get.zfsbootmenu.org/source | tar -zxv --strip-components=1 -f -
 	make core dracut
 
 	# Install dracut-crypt-ssh
-	echo "Installing dracut-crypt-ssh."
+	echo "[[LOG]] Installing dracut-crypt-ssh."
 	git -C /tmp clone 'https://github.com/dracut-crypt-ssh/dracut-crypt-ssh'
 	rm /tmp/dracut-crypt-ssh/modules/60crypt-ssh/Makefile
 	rm -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh/helper
@@ -327,7 +327,7 @@ enter_chroot() {
 	cp -r /tmp/dracut-crypt-ssh/modules/60crypt-ssh /usr/lib/dracut/modules.d
 
 	# Configure dracut for network and dropbear
-	echo "Configuring dracut for network and dropbear."
+	echo "[[LOG]] Configuring dracut for network and dropbear."
 	mkdir -p /etc/cmdline.d
 	echo "ip=dhcp rd.neednet=1" > /etc/cmdline.d/dracut-network.conf
 	mkdir -p /etc/dropbear
@@ -335,7 +335,7 @@ enter_chroot() {
 	ln -s "/root/.ssh/authorized_keys" /etc/dropbear/root_key
 
 	# Writing dracut.conf.d/...
-	echo "Writing dracut.conf.d/..."
+	echo "[[LOG]] Writing dracut.conf.d/..."
 		cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
 		add_dracutmodules+=" crypt-ssh "
 		install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
@@ -347,43 +347,43 @@ enter_chroot() {
 	echo 'omit_dracutmodules+=" crypt-ssh "' > /etc/dracut.conf.d/no-crypt-ssh.conf
 
 	# Configure ZFSBootMenu
-	echo "Configuring ZFSBootMenu."
+	echo "[[LOG]] Configuring ZFSBootMenu."
 	sed -i -e 's/^  ManageImages: false$/  ManageImages: true/' \
-		-e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
-		-e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
-		/etc/zfsbootmenu/config.yaml
+	  -e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
+	  -e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
+	  /etc/zfsbootmenu/config.yaml
 
 	# Generate ZFSBootMenu
-	echo "Generating ZFSBootMenu."
+	echo "[[LOG]] Generating ZFSBootMenu."
 	generate-zbm
 
 	# Mount EFI variables if needed
-	echo "Mounting efivarfs for boot entry setup..."
+	echo "[[LOG]] Mounting efivarfs for boot entry setup..."
 	mount -t efivarfs efivarfs /sys/firmware/efi/efivars
 
 	# Configure EFI boot entries
-	echo "Configuring EFI boot entries..."
+	echo "[[LOG]] Configuring EFI boot entries..."
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
-	
+
 	# Configure network
-	echo "Configuring network for DHCP on $NET_IF."
+	echo "[[LOG]] Configuring network for DHCP on $NET_IF."
 	echo "auto $NET_IF" >> /etc/network/interfaces
 	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 	EOF
 }
 
 final_cleanup() {
-  echo "Exporting ZFS pool and completing installation..."
+  echo "[[LOG]] Exporting ZFS pool and completing installation..."
   umount -n -R /mnt
   zpool export -a
 }
 
 # Execution sequence
-echo "Starting ZFS Boot Menu installation..."
-echo "Current kernel version is: $KERNEL_VERSION"
-echo "OS ID from /etc/os-release is: $ID"
+echo "[[LOG]] Starting ZFS Boot Menu installation..."
+echo "[[LOG]] Current kernel version is: $KERNEL_VERSION"
+echo "[[LOG]] OS ID from /etc/os-release is: $ID"
 set_credentials
 select_disk
 select_network_interface
@@ -397,4 +397,4 @@ prepare_chroot
 enter_chroot
 final_cleanup
 
-echo "ZFS Boot Menu installation complete. You may reboot."
+echo "[[LOG]] ZFS Boot Menu installation complete. You may reboot."
