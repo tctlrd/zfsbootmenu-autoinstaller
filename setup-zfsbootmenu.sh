@@ -34,11 +34,11 @@ export DEBIAN_FRONTEND=noninteractive
 set_credentials(){
   # Check if credentials are already set
   if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
-    echo "Credentials have been set."
-    echo "Hostname: $HOSTNAME"
-    echo "Root password: [SET]"
-    echo "Encryption passphrase: [SET]"
-	echo "SSH key: [SET]"
+    echo "[[LOG]] Credentials have been set."
+    echo "[[LOG]] Hostname: $HOSTNAME"
+    echo "[[LOG]] Root password: [SET]"
+    echo "[[LOG]] Encryption passphrase: [SET]"
+    echo "[[LOG]] SSH key: [SET]"
     return
   fi
   
