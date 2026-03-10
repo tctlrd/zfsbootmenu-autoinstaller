@@ -2,8 +2,7 @@
 
 # Automatically set other variables
 TIMEZONE="America/Chicago"
-NET_IF="ens18"
-
+NET_IF=""  # Will be set by select_network_interface function
 BOOT_DISK="/dev/vda"
 BOOT_PART="1"
 POOL_DISK="/dev/vda"
@@ -51,6 +50,29 @@ select_disk() {
   done
   echo "Boot device is set to $BOOT_DEVICE"
   echo "Pool device is set to $POOL_DEVICE"
+}
+
+select_network_interface() {
+  echo "Available network interfaces:"
+  # List available network interfaces and store them in an array
+  mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
+
+  # Display interfaces with numbering
+  for i in "${!interfaces[@]}"; do
+    echo "$((i + 1)). ${interfaces[i]}"
+  done
+
+  # Prompt user to select an interface by number
+  while true; do
+    read -p "Enter the number of the network interface you want to use (e.g., 1, 2): " choice
+    if [[ $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
+      NET_IF="${interfaces[$((choice - 1))]}"
+      echo "Selected network interface: $NET_IF"
+      break
+    else
+      echo "Invalid choice. Please select a number from the list."
+    fi
+  done
 }
 
 configure_apt_sources() {
@@ -144,13 +166,13 @@ prepare_chroot() {
 
 enter_chroot() {
   echo "Entering chroot environment to configure system..."
-  chroot $MNT_P /bin/bash <<-EOF
+#?  chroot $MNT_P /bin/bash <<-EOF
   # Set hostname
   echo "$HOSTNAME" > /etc/hostname
   echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
 
   # Configure apt sources
-    cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
+#?    cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
     Types: deb deb-src
     URIs: http://deb.debian.org/debian/
     Suites: trixie trixie-updates
@@ -213,7 +235,7 @@ enter_chroot() {
 
   # Configure fstab entry for EFI
   echo "Configuring fstab for EFI partition..."
-    cat <<-EOF_FSTAB >> /etc/fstab
+#?    cat <<-EOF_FSTAB >> /etc/fstab
     $( blkid | grep "$BOOT_DEVICE" | cut -d ' ' -f 2 ) /boot/efi vfat defaults 0 0
     EOF_FSTAB
 
@@ -267,7 +289,7 @@ enter_chroot() {
 
   # Writing dracut.conf.d/...
   echo "Writing dracut.conf.d/..."
-    cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
+#?    cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
     add_dracutmodules+=" crypt-ssh "
     install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
     dropbear_acl=/root/.ssh/authorized_keys
@@ -316,6 +338,7 @@ echo "Starting ZFS Boot Menu installation..."
 echo "Current kernel version is: $KERNEL_VERSION"
 echo "OS ID from /etc/os-release is: $ID"
 select_disk
+select_network_interface
 get_username_and_password
 configure_apt_sources
 install_host_packages
