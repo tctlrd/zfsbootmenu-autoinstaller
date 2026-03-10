@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Optionally set variables
+# Optionally set variables here or override variables with those from install.env file.
 MLANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
 #NET_IF=""
