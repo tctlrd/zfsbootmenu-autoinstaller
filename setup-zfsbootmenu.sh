@@ -260,8 +260,7 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "Installing kernel and ZFS packages..."
-	apt install -y linux-headers-amd64 linux-image-amd64
-	apt install -y zfs-initramfs
+	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
   
 	# Set root password
@@ -278,7 +277,7 @@ enter_chroot() {
 	# Rebuild initramfs
 	echo "Rebuilding initramfs..."
 	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
-	update-initramfs -c -k all
+	# update-initramfs -c -k all
 
 	# Set ZFSBootMenu command-line arguments for inherited ZFS properties
 	echo "Configuring ZFSBootMenu command-line arguments..."
