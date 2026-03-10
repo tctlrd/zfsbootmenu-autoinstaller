@@ -15,8 +15,9 @@ BOOT_DISK=""
 POOL_DISK=""
 BOOT_PART="1"
 POOL_PART="2"
-BOOT_DEVICE="${BOOT_DISK}p${BOOT_PART}"
-POOL_DEVICE="${POOL_DISK}p${POOL_PART}"
+PART_SUF="-part"
+BOOT_DEVICE="${BOOT_DISK}${PART_SUF}${BOOT_PART}"
+POOL_DEVICE="${POOL_DISK}${PART_SUF}${POOL_PART}"
 POOL_NAME="zroot"
 MNT_P="/mnt"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
@@ -52,10 +53,9 @@ select_disk() {
     echo "Pool device is set to $POOL_DEVICE"
     return
   fi
-  
   echo "Available disks:"
   # List available disks with lsblk and store them in an array
-  mapfile -t disks < <(lsblk -dn -o NAME,WWN,TYPE,SIZE | grep 'disk' | awk '{print $1,"wwn-" $2,$3,$4}')
+  mapfile -t disks < <(lsblk -dn -o NAME,SIZE,TYPE | grep 'disk')
 
   # Display disks with numbering
   for i in "${!disks[@]}"; do
@@ -64,15 +64,15 @@ select_disk() {
 
   # Prompt user to select a disk by number
   while true; do
-    read -p "Enter the number of the disk you want to use for boot and pool (e.g., 1, 2): " choice
+    read -p "Enter the number of the disk you want to use (e.g., 1): " choice
     if [[ $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
       # Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
       selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
       BOOT_DISK="/dev/disk/by-id/$selected_disk"
       POOL_DISK="/dev/disk/by-id/$selected_disk"
-      BOOT_DEVICE="${BOOT_DISK}p${BOOT_PART}"
-      POOL_DEVICE="${POOL_DISK}p${POOL_PART}"
-      echo "Selected disk: $BOOT_DISK"
+      BOOT_DEVICE="${BOOT_DISK}${PART_SUF}${BOOT_PART}"
+      POOL_DEVICE="${POOL_DISK}${PART_SUF}${POOL_PART}"
+      echo "Selected boot disk: $BOOT_DISK"
       break
     else
       echo "Invalid choice. Please select a number from the list."
@@ -100,7 +100,7 @@ select_network_interface() {
 
   # Prompt user to select an interface by number
   while true; do
-    read -p "Enter the number of the network interface you want to use (e.g., 1, 2): " choice
+    read -p "Enter the number of the network interface you want to use (e.g., 1): " choice
     if [[ $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
       NET_IF="${interfaces[$((choice - 1))]}"
       echo "Selected network interface: $NET_IF"
