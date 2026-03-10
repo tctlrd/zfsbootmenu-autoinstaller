@@ -262,7 +262,8 @@ enter_chroot() {
 	echo "[[LOG]] Installing kernel and ZFS packages..."
 	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
-  
+  echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
+
 	# Set root password
 	echo "[[LOG]] Setting root password."
 	echo "root:$ROOT_PASSWORD" | chpasswd
@@ -274,26 +275,19 @@ enter_chroot() {
 	systemctl enable zfs-mount
 	systemctl enable zfs-import.target
 
-	# Rebuild initramfs
-	echo "[[LOG]] Rebuilding initramfs..."
-	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
-	# update-initramfs -c -k all
-
 	# Set ZFSBootMenu command-line arguments for inherited ZFS properties
 	echo "[[LOG]] Configuring ZFSBootMenu command-line arguments..."
 	zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
 	zfs set org.zfsbootmenu:keysource="$POOL_NAME/ROOT/$ID" $POOL_NAME
 
-	# Configure fstab entry for EFI
-	echo "[[LOG]] Configuring fstab for EFI partition..."
+	# Configuring EFI
+	echo "[[LOG]] Configuring EFI."
 	echo "UUID=$BOOT_UUID /boot/efi vfat defaults 0 0" >> /etc/fstab
-
-	# Mount EFI partition
 	mkdir -p /boot/efi
 	mount /boot/efi
 
 	# Install ZFSBootMenu
-	echo "[[LOG]] Installing dependencies for ZFSBootMenu..."
+	echo "[[LOG]] Installing dependencies for ZFSBootMenu."
 	apt install -y --no-install-recommends \
 	libsort-versions-perl \
 	libboolean-perl \
