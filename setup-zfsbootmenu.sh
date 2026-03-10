@@ -118,7 +118,7 @@ select_network_interface() {
 }
 
 configure_apt_sources() {
-  echo "Configuring APT sources..."
+  echo "[[LOG]] Configuring APT sources..."
   cat > /etc/apt/sources.list <<EOF
 deb http://deb.debian.org/debian trixie main contrib non-free-firmware
 deb-src http://deb.debian.org/debian trixie main contrib non-free-firmware
@@ -132,7 +132,7 @@ EOF
 }
 
 install_host_packages() {
-  echo "Installing necessary packages"
+  echo "[[LOG]] Installing necessary packages"
   apt update
 	apt full-upgrade -y
   apt install -y debootstrap gdisk dosfstools dkms linux-headers-$(uname -r)
@@ -151,11 +151,11 @@ partition_disk() {
   sleep 2
   count=0
   while [ ! -e "$POOL_DEVICE" ]; do
-    echo "Waiting for pool device to appear: $POOL_DEVICE"
+    echo "[[LOG]] Waiting for pool device to appear: $POOL_DEVICE"
     sleep 1
     count=$((count + 1))
     if [ $count -ge 5 ]; then
-      echo "Timeout waiting for pool device"
+      echo "[[LOG]] Timeout waiting for pool device"
       exit 1
     fi
   done
@@ -171,7 +171,7 @@ partition_disk() {
 create_zpool() {
   echo "$ENC_PHRASE" > /etc/zfs/zroot.key
   chmod 000 /etc/zfs/zroot.key
-  echo "Creating ZFS pool and datasets..."
+  echo "[[LOG]] Creating ZFS pool and datasets..."
   zpool create -f -o ashift=12 \
   -O compression=lz4 \
   -O acltype=posixacl \
@@ -202,14 +202,14 @@ export_import_zpool() {
 }
 
 setup_base_system() {
-  echo "Installing base system with debootstrap..."
+  echo "[[LOG]] Installing base system with debootstrap..."
   debootstrap trixie $MNT_P
   cp /etc/hostid $MNT_P/etc/hostid
   cp /etc/resolv.conf $MNT_P/etc/resolv.conf
 }
 
 prepare_chroot() {
-  echo "Mounting filesystems for chroot environment..."
+  echo "[[LOG]] Mounting filesystems for chroot environment..."
   mount -t proc proc $MNT_P/proc
   mount -t sysfs sys $MNT_P/sys
   mount -B /dev $MNT_P/dev
