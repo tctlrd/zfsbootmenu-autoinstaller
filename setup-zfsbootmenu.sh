@@ -372,9 +372,9 @@ final_cleanup() {
 echo "Starting ZFS Boot Menu installation..."
 echo "Current kernel version is: $KERNEL_VERSION"
 echo "OS ID from /etc/os-release is: $ID"
+set_credentials
 select_disk
 select_network_interface
-set_credentials
 configure_apt_sources
 install_host_packages
 partition_disk
