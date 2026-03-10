@@ -13,6 +13,7 @@ TIMEZONE="America/Chicago" # timezone variable demands underscore instead of spa
 # use DISK_SUF="" (empty) var for /dev/sdX1 format
 BOOT_DISK=""
 POOL_DISK=""
+BOOT_UUID=""
 BOOT_PART="1"
 POOL_PART="2"
 DISK_SUF="-part"
