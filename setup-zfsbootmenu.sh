@@ -1,28 +1,57 @@
 #!/bin/bash
 
-# Automatically set other variables
+# Optionally set variables
 TIMEZONE="America/Chicago"
-NET_IF=""  # Will be set by select_network_interface function
-BOOT_DISK="/dev/vda"
+NET_IF=""
+ROOT_PASSWORD=""
+ENC_PHRASE=""
+SSH_KEY=""
+HOSTNAME=""
+
+# Use /dev/disk/by-id/ for persistent device naming or
+# remove "p" from _DEVICE variables for /dev/sdX format
+BOOT_DISK=""
+POOL_DISK=""
 BOOT_PART="1"
-POOL_DISK="/dev/vda"
 POOL_PART="2"
+BOOT_DEVICE="${BOOT_DISK}p${BOOT_PART}"
+POOL_DEVICE="${POOL_DISK}p${POOL_PART}"
 POOL_NAME="zroot"
-KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 MNT_P="/mnt"
+KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
+
 export DEBIAN_FRONTEND=noninteractive
 
-get_username_and_password(){
+set_credentials(){
+  # Check if credentials are already set
+  if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
+    echo "Credentials have been set."
+    echo "Hostname: $HOSTNAME"
+    echo "Root password: [SET]"
+    echo "Encryption passphrase: [SET]"
+	echo "SSH key: [SET]"
+    return
+  fi
+  
   # Prompt user for variables
-  read -p "Enter root password: " ROOT_PASSWORD
+  [[ -z "$HOSTNAME" ]] && read -p "Enter hostname for this system: " HOSTNAME
   echo
-  read -p "Enter encryption passphrase: " ENC_PHRASE
+  [[ -z "$ROOT_PASSWORD" ]] && read -p "Enter root password: " ROOT_PASSWORD
   echo
-  read -p "Enter hostname for this system: " HOSTNAME
+  [[ -z "$ENC_PHRASE" ]] && read -p "Enter encryption passphrase: " ENC_PHRASE
+  echo
+  [[ -z "$SSH_KEY" ]] && read -p "Enter SSH public key: " SSH_KEY
 }
 
 select_disk() {
+  # Check if disk is already selected
+  if [[ -n "$BOOT_DEVICE" && -n "$POOL_DEVICE" ]]; then
+    echo "Boot device is set to $BOOT_DEVICE"
+    echo "Pool device is set to $POOL_DEVICE"
+    return
+  fi
+  
   echo "Available disks:"
   # List available disks with lsblk and store them in an array
   mapfile -t disks < <(lsblk -dn -o NAME,WWN,TYPE,SIZE | grep 'disk' | awk '{print $1,"wwn-" $2,$3,$4}')
@@ -40,8 +69,8 @@ select_disk() {
       selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
       BOOT_DISK="/dev/disk/by-id/$selected_disk"
       POOL_DISK="/dev/disk/by-id/$selected_disk"
-      BOOT_DEVICE="${BOOT_DISK}${BOOT_PART}"
-      POOL_DEVICE="${POOL_DISK}${POOL_PART}"
+      BOOT_DEVICE="${BOOT_DISK}p${BOOT_PART}"
+      POOL_DEVICE="${POOL_DISK}p${POOL_PART}"
       echo "Selected disk: $BOOT_DISK"
       break
     else
@@ -53,6 +82,12 @@ select_disk() {
 }
 
 select_network_interface() {
+  # Check if network interface is already selected
+  if [[ -n "$NET_IF" ]]; then
+    echo "Network interface selected: $NET_IF"
+    return
+  fi
+  
   echo "Available network interfaces:"
   # List available network interfaces and store them in an array
   mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
@@ -146,14 +181,6 @@ setup_base_system() {
   debootstrap trixie $MNT_P
   cp /etc/hostid $MNT_P/etc/hostid
   cp /etc/resolv.conf $MNT_P/etc/resolv.conf
-  mkdir $MNT_P/etc/zfs
-  cp /etc/zfs/zroot.key $MNT_P/etc/zfs
-  
-  # Copy SSH keys if they exist
-  if [ -f /root/.ssh/authorized_keys ]; then
-      mkdir -p $MNT_P/root/.ssh
-      cp /root/.ssh/authorized_keys $MNT_P/root/.ssh
-  fi
 }
 
 prepare_chroot() {
@@ -166,13 +193,19 @@ prepare_chroot() {
 
 enter_chroot() {
   echo "Entering chroot environment to configure system..."
-#?  chroot $MNT_P /bin/bash <<-EOF
+  chroot $MNT_P /bin/bash <<-EOF
   # Set hostname
   echo "$HOSTNAME" > /etc/hostname
   echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
-
+  mkdir /etc/zfs
+  echo "$ENC_PHRASE" > /etc/zfs/zroot.key
+  # Set SSH key
+  mkdir -p /root/.ssh
+  echo "$SSH_KEY" > /root/.ssh/authorized_keys
+  chmod 700 /root/.ssh
+  chmod 600 /root/.ssh/authorized_keys
   # Configure apt sources
-#?    cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
+    cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
     Types: deb deb-src
     URIs: http://deb.debian.org/debian/
     Suites: trixie trixie-updates
@@ -208,7 +241,7 @@ enter_chroot() {
   echo "root:$ROOT_PASSWORD" | chpasswd
 
   # Configure network
-  echo "Configuring network."
+  echo "Configuring network for DHCP on $NET_IF."
   echo "auto $NET_IF" >> /etc/network/interfaces
   echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 
@@ -235,7 +268,7 @@ enter_chroot() {
 
   # Configure fstab entry for EFI
   echo "Configuring fstab for EFI partition..."
-#?    cat <<-EOF_FSTAB >> /etc/fstab
+    cat <<-EOF_FSTAB >> /etc/fstab
     $( blkid | grep "$BOOT_DEVICE" | cut -d ' ' -f 2 ) /boot/efi vfat defaults 0 0
     EOF_FSTAB
 
@@ -289,7 +322,7 @@ enter_chroot() {
 
   # Writing dracut.conf.d/...
   echo "Writing dracut.conf.d/..."
-#?    cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
+    cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
     add_dracutmodules+=" crypt-ssh "
     install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
     dropbear_acl=/root/.ssh/authorized_keys
@@ -339,7 +372,7 @@ echo "Current kernel version is: $KERNEL_VERSION"
 echo "OS ID from /etc/os-release is: $ID"
 select_disk
 select_network_interface
-get_username_and_password
+set_credentials
 configure_apt_sources
 install_host_packages
 partition_disk
