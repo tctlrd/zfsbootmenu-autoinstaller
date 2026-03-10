@@ -23,6 +23,11 @@ MNT_P="/mnt"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 
+# optionally override variables with those from install.env file
+if [ -f "install.env" ]; then
+    source install.env
+    echo "Loaded configuration from install.env"
+fi
 export DEBIAN_FRONTEND=noninteractive
 
 set_credentials(){
@@ -179,11 +184,11 @@ create_zpool() {
 
 export_import_zpool() {
   echo "Exporting and re-importing ZFS pool for mounting..."
-  zpool export zroot
-  zpool import -N -R $MNT_P zroot
-  zfs load-key -L file:///etc/zfs/zroot.key zroot
-  zfs mount zroot/ROOT/${ID}
-  zfs mount zroot/home
+  zpool export $POOL_NAME
+  zpool import -N -R $MNT_P $POOL_NAME
+  zfs load-key -L file:///etc/zfs/zroot.key $POOL_NAME
+  zfs mount $POOL_NAME/ROOT/${ID}
+  zfs mount $POOL_NAME/home
   udevadm trigger
 }
 
@@ -389,8 +394,8 @@ configure_apt_sources
 install_host_packages
 partition_disk
 create_zpool
-setup_base_system
 export_import_zpool
+setup_base_system
 prepare_chroot
 enter_chroot
 final_cleanup
