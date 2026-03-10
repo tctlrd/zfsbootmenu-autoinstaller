@@ -329,9 +329,7 @@ enter_chroot() {
 	mkdir -p /etc/cmdline.d
 	echo "ip=dhcp rd.neednet=1" > /etc/cmdline.d/dracut-network.conf
 	mkdir -p /etc/dropbear
-	for keytype in rsa ecdsa ed25519; do
-	ssh-keygen -g -N "" -m PEM -t "${keytype}" -f "/etc/dropbear/ssh_host_${keytype}_key"
-	done
+	for keytype in rsa ecdsa ed25519; do ssh-keygen -t "\$keytype" -f "/etc/dropbear/ssh_host_\${keytype}_key" -N ""; done
 	ln -s "/root/.ssh/authorized_keys" /etc/dropbear/root_key
 
 	# Writing dracut.conf.d/...
