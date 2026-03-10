@@ -126,6 +126,12 @@ setup_base_system() {
     cp /etc/resolv.conf $MNT_P/etc/resolv.conf
     mkdir $MNT_P/etc/zfs
     cp /etc/zfs/zroot.key $MNT_P/etc/zfs
+    
+    # Copy SSH keys if they exist
+    if [ -f /root/.ssh/authorized_keys ]; then
+        mkdir -p $MNT_P/root/.ssh
+        cp /root/.ssh/authorized_keys $MNT_P/root/.ssh
+    fi
 }
 
 prepare_chroot() {
