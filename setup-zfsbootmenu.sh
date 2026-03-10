@@ -252,40 +252,40 @@ enter_chroot() {
 	apt update
 
 	# Set locale and timezone
-	echo "Configuring locale and timezone."
+	echo "[[LOG]] Configuring locale and timezone."
 	echo "LANG UTF-8" > /etc/locale.gen
 	ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 	apt install -y locales console-setup
 	update-locale LANG=$MLANG
 
 	# Install kernel and ZFS packages
-	echo "Installing kernel and ZFS packages..."
+	echo "[[LOG]] Installing kernel and ZFS packages..."
 	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
   
 	# Set root password
-	echo "Setting root password."
+	echo "[[LOG]] Setting root password."
 	echo "root:$ROOT_PASSWORD" | chpasswd
 
 	# Enable systemd ZFS services
-	echo "Enabling systemd ZFS services..."
+	echo "[[LOG]] Enabling systemd ZFS services..."
 	systemctl enable zfs.target
 	systemctl enable zfs-import-cache
 	systemctl enable zfs-mount
 	systemctl enable zfs-import.target
 
 	# Rebuild initramfs
-	echo "Rebuilding initramfs..."
+	echo "[[LOG]] Rebuilding initramfs..."
 	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
 	# update-initramfs -c -k all
 
 	# Set ZFSBootMenu command-line arguments for inherited ZFS properties
-	echo "Configuring ZFSBootMenu command-line arguments..."
+	echo "[[LOG]] Configuring ZFSBootMenu command-line arguments..."
 	zfs set org.zfsbootmenu:commandline="quiet" $POOL_NAME/ROOT
 	zfs set org.zfsbootmenu:keysource="$POOL_NAME/ROOT/$ID" $POOL_NAME
 
 	# Configure fstab entry for EFI
-	echo "Configuring fstab for EFI partition..."
+	echo "[[LOG]] Configuring fstab for EFI partition..."
 	echo "UUID=$BOOT_UUID /boot/efi vfat defaults 0 0" >> /etc/fstab
 
 	# Mount EFI partition
