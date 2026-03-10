@@ -10,7 +10,7 @@ SSH_KEY=""
 HOSTNAME=""
 
 # Use /dev/disk/by-id/ for persistent device naming or
-# remove "p" from _DEVICE variables for /dev/sdX format
+# remove use empty PART_SUF var for /dev/sdX1 format
 BOOT_DISK=""
 POOL_DISK=""
 BOOT_PART="1"
