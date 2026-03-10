@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Optionally set variables
-TIMEZONE="America/Chicago"
+TIMEZONE="America/Chicago" # timezone variable demands underscore_instead of space
 NET_IF=""
 ROOT_PASSWORD=""
 ENC_PHRASE=""
@@ -194,6 +194,8 @@ prepare_chroot() {
 enter_chroot() {
   echo "Entering chroot environment to configure system..."
   chroot $MNT_P /bin/bash <<-EOF
+
+
   # Set hostname
   echo "$HOSTNAME" > /etc/hostname
   echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
