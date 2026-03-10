@@ -10,14 +10,14 @@ TIMEZONE="America/Chicago" # timezone variable demands underscore instead of spa
 #HOSTNAME=""
 
 # Use /dev/disk/by-id/ for persistent device naming or
-# use PART_SUF="" (empty) var for /dev/sdX1 format
+# use DISK_SUF="" (empty) var for /dev/sdX1 format
 BOOT_DISK=""
 POOL_DISK=""
 BOOT_PART="1"
 POOL_PART="2"
-PART_SUF="-part"
-BOOT_DEVICE="${BOOT_DISK}${PART_SUF}${BOOT_PART}"
-POOL_DEVICE="${POOL_DISK}${PART_SUF}${POOL_PART}"
+DISK_SUF="-part"
+BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
+POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
 POOL_NAME="zroot"
 MNT_P="/mnt"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
@@ -75,8 +75,8 @@ select_disk() {
       selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
       BOOT_DISK="/dev/disk/by-id/$selected_disk"
       POOL_DISK="/dev/disk/by-id/$selected_disk"
-      BOOT_DEVICE="${BOOT_DISK}${PART_SUF}${BOOT_PART}"
-      POOL_DEVICE="${POOL_DISK}${PART_SUF}${POOL_PART}"
+      BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
+      POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
       echo "Selected boot disk: $BOOT_DISK"
       break
     else
