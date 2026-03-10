@@ -55,7 +55,7 @@ select_disk() {
   fi
   echo "Available disks:"
   # List available disks with lsblk and store them in an array
-  mapfile -t disks < <(lsblk -dn -o NAME,SIZE,TYPE | grep 'disk')
+  mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
 
   # Display disks with numbering
   for i in "${!disks[@]}"; do
