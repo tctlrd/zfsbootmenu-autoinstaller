@@ -27,7 +27,7 @@ ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 # optionally override variables with those from install.env file
 if [ -f "install.env" ]; then
     source install.env
-    echo "LOG: Loaded configuration from install.env"
+    echo "[[LOG]] Loaded configuration from install.env"
 fi
 export DEBIAN_FRONTEND=noninteractive
 
@@ -55,11 +55,11 @@ set_credentials(){
 select_disk() {
   # Check if disk is already selected
   if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
-    echo "LOG: Boot device is $BOOT_DEVICE"
-    echo "LOG: Pool device is $POOL_DEVICE"
+    echo "[[LOG]] Boot device is $BOOT_DEVICE"
+    echo "[[LOG]] Pool device is $POOL_DEVICE"
     return
   fi
-  echo "LOG: Available disks:"
+  echo "[[LOG]] Available disks:"
   # List available disks with lsblk and store them in an array
   mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
 
@@ -78,7 +78,7 @@ select_disk() {
       POOL_DISK="/dev/disk/by-id/$selected_disk"
       BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
       POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
-      echo "LOG: Selected boot disk: $BOOT_DISK"
+      echo "[[LOG]] Selected boot disk: $BOOT_DISK"
       break
     else
       echo "Invalid choice. Please select a number from the list."
