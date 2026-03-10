@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Optionally set variables
-LANG=en_US.UTF-8
+MLANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
 #NET_IF=""
 #ROOT_PASSWORD=""
@@ -54,8 +54,8 @@ set_credentials(){
 select_disk() {
   # Check if disk is already selected
   if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
-    echo "Boot device is set to $BOOT_DEVICE"
-    echo "Pool device is set to $POOL_DEVICE"
+    echo "Boot device is $BOOT_DEVICE"
+    echo "Pool device is $POOL_DEVICE"
     return
   fi
   echo "Available disks:"
@@ -159,6 +159,8 @@ partition_disk() {
     fi
   done
   echo "Pool device found: $POOL_DEVICE"
+  BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
+  echo "Boot UUID is $BOOT_UUID"
 }
 
 create_zpool() {
@@ -247,10 +249,10 @@ enter_chroot() {
 
 	# Set locale and timezone
 	echo "Configuring locale and timezone."
-	echo "$LANG UTF-8" > /etc/locale.gen
+	echo "MLANG UTF-8" > /etc/locale.gen
 	ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 	apt install -y locales console-setup
-	update-locale LANG=$LANG
+	update-locale LANG=$MLANG
 
 	# Install kernel and ZFS packages
 	echo "Installing kernel and ZFS packages..."
@@ -284,7 +286,6 @@ enter_chroot() {
 
 	# Configure fstab entry for EFI
 	echo "Configuring fstab for EFI partition..."
-	BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
 	echo "UUID=$BOOT_UUID /boot/efi vfat defaults 0 0" >> /etc/fstab
 
 	# Mount EFI partition
