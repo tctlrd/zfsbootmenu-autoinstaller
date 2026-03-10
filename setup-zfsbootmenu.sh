@@ -241,6 +241,8 @@ enter_chroot() {
 
 	# Update and install necessary packages
 	export DEBIAN_FRONTEND=noninteractive
+	export LC_ALL=C
+	export LANG=C
 	apt update
 
 	# Set locale and timezone
