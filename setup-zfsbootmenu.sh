@@ -282,9 +282,8 @@ enter_chroot() {
 
 	# Configure fstab entry for EFI
 	echo "Configuring fstab for EFI partition..."
-		cat <<-EOF_FSTAB >> /etc/fstab
-		$( blkid | grep "$BOOT_DEVICE" | cut -d ' ' -f 2 ) /boot/efi vfat defaults 0 0
-		EOF_FSTAB
+	BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
+	echo "UUID=$BOOT_UUID /boot/efi vfat defaults 0 0" >> /etc/fstab
 
 	# Mount EFI partition
 	mkdir -p /boot/efi
