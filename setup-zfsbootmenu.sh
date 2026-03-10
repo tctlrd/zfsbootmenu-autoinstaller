@@ -186,7 +186,7 @@ create_zpool() {
 export_import_zpool() {
   echo "Exporting and re-importing ZFS pool for mounting..."
   zpool export $POOL_NAME
-  zpool import -N -R $MNT_P $POOL_DEVICE $POOL_NAME
+  zpool import -N -R $MNT_P $POOL_NAME
   zfs load-key -L file:///etc/zfs/zroot.key $POOL_NAME
   zfs mount $POOL_NAME/ROOT/${ID}
   zfs mount $POOL_NAME/home
