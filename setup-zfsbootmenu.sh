@@ -253,7 +253,7 @@ enter_chroot() {
 
 	# Set locale and timezone
 	echo "[[LOG]] Configuring locale and timezone."
-	echo "LANG UTF-8" > /etc/locale.gen
+	echo "$MLANG UTF-8" > /etc/locale.gen
 	ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 	apt install -y locales console-setup
 	update-locale LANG=$MLANG
