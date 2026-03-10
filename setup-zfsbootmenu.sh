@@ -302,7 +302,7 @@ enter_chroot() {
   echo "Running dist-upgrade to upgrade all packages to the latest version."
   apt full-upgrade -y
 
-  EOF
+EOF
 }
 
 final_cleanup() {
