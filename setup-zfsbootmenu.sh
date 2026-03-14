@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # Optionally set variables here or override variables with those from install.env file.
+INTERACTIVE=true
+ADDON="none" # optional: pve (proxmox virtual environment), pbs, pmg
 MLANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
 #NET_IF=""
@@ -9,11 +11,10 @@ TIMEZONE="America/Chicago" # timezone variable demands underscore instead of spa
 #SSH_KEY=""
 #HOSTNAME=""
 
-# Use /dev/disk/by-id/ for persistent device naming or
-# use DISK_SUF="" (empty) var for /dev/sdX1 format
+# Use /dev/disk/by-id/xyz123 for persistent device naming or
+# for /dev/sdX1 format set disk suffix var to empty DISK_SUF=""
 BOOT_DISK=""
 POOL_DISK=""
-BOOT_UUID=""
 BOOT_PART="1"
 POOL_PART="2"
 DISK_SUF="-part"
@@ -23,33 +24,42 @@ POOL_NAME="zroot"
 MNT_P="/mnt"
 KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
+BOOT_UUID=""
 
-# optionally override variables with those from install.env file
+# Override variables with those from install.env file if it exists.
 if [ -f "install.env" ]; then
     source install.env
     echo "[[LOG]] Loaded configuration from install.env"
 fi
 export DEBIAN_FRONTEND=noninteractive
 
-set_credentials(){
+set_vars(){
+  # Prompt for ADDON selection
+  if [[ -z "$ADDON" ]]; then
+    addon_choice=$(whiptail --title "Select Addon" --menu "Select addon to install:" 15 60 4 \
+      "" "None" \
+      "pve" "Proxmox Virtual Environment" \
+      "pbs" "Proxmox Backup Server" \
+      "pmg" "Proxmox Mail Gateway" 3>&1 1>&2 2>&3)
+    ADDON="$addon_choice"
+  fi
+
   # Check if credentials are already set
   if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
     echo "[[LOG]] Credentials have been set."
     echo "[[LOG]] Hostname: $HOSTNAME"
     echo "[[LOG]] Root password: [SET]"
     echo "[[LOG]] Encryption passphrase: [SET]"
-    echo "[[LOG]] SSH key: [SET]"
+    echo "[[LOG]] SSH key: $SSH_KEY"
     return
   fi
   
-  # Prompt user for variables
-  [[ -z "$HOSTNAME" ]] && read -p "Enter hostname for this system: " HOSTNAME
-  echo
-  [[ -z "$ROOT_PASSWORD" ]] && read -p "Enter root password: " ROOT_PASSWORD
-  echo
-  [[ -z "$ENC_PHRASE" ]] && read -p "Enter encryption passphrase: " ENC_PHRASE
-  echo
-  [[ -z "$SSH_KEY" ]] && read -p "Enter SSH public key: " SSH_KEY
+  # Prompt user for variables using whiptail
+  [[ -z "$HOSTNAME" ]] && HOSTNAME=$(whiptail --inputbox "Enter hostname for this system:" 10 60 "" 3>&1 1>&2 2>&3)
+  [[ -z "$ROOT_PASSWORD" ]] && ROOT_PASSWORD=$(whiptail --passwordbox "Enter root password:" 10 60 3>&1 1>&2 2>&3)
+  [[ -z "$ENC_PHRASE" ]] && ENC_PHRASE=$(whiptail --passwordbox "Enter encryption passphrase:" 10 60 3>&1 1>&2 2>&3)
+  [[ -z "$SSH_KEY" ]] && SSH_KEY=$(whiptail --inputbox "Enter SSH public key:" 10 60 3>&1 1>&2 2>&3)
+  
 }
 
 select_disk() {
@@ -59,31 +69,33 @@ select_disk() {
     echo "[[LOG]] Pool device is $POOL_DEVICE"
     return
   fi
+  
   echo "[[LOG]] Available disks:"
   # List available disks with lsblk and store them in an array
   mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
 
-  # Display disks with numbering
+  # Build whiptail menu options
+  menu_options=()
   for i in "${!disks[@]}"; do
-    echo "$((i + 1)). ${disks[i]}"
+    menu_options+=("$((i + 1))" "${disks[i]}")
   done
 
-  # Prompt user to select a disk by number
-  while true; do
-    read -p "Enter the number of the disk you want to use (e.g., 1): " choice
-    if [[ $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
-      # Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
-      selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
-      BOOT_DISK="/dev/disk/by-id/$selected_disk"
-      POOL_DISK="/dev/disk/by-id/$selected_disk"
-      BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
-      POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
-      echo "[[LOG]] Selected boot disk: $BOOT_DISK"
-      break
-    else
-      echo "Invalid choice. Please select a number from the list."
-    fi
-  done
+  # Prompt user to select a disk using whiptail
+  choice=$(whiptail --title "Select Disk" --menu "Select the disk you want to use:" 20 80 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+  
+  if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
+    # Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
+    selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
+    BOOT_DISK="/dev/disk/by-id/$selected_disk"
+    POOL_DISK="/dev/disk/by-id/$selected_disk"
+    BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
+    POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
+    echo "[[LOG]] Selected boot disk: $BOOT_DISK"
+  else
+    echo "No disk selected or invalid selection. Exiting."
+    exit 1
+  fi
+  
   echo "[[LOG]] Boot device is set to $BOOT_DEVICE"
   echo "[[LOG]] Pool device is set to $POOL_DEVICE"
 }
@@ -99,22 +111,60 @@ select_network_interface() {
   # List available network interfaces and store them in an array
   mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
 
-  # Display interfaces with numbering
+  # Build whiptail menu options
+  menu_options=()
   for i in "${!interfaces[@]}"; do
-    echo "$((i + 1)). ${interfaces[i]}"
+    menu_options+=("$((i + 1))" "${interfaces[i]}")
   done
 
-  # Prompt user to select an interface by number
-  while true; do
-    read -p "Enter the number of the network interface you want to use (e.g., 1): " choice
-    if [[ $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
-      NET_IF="${interfaces[$((choice - 1))]}"
-      echo "[[LOG]] Selected network interface: $NET_IF"
-      break
-    else
-      echo "Invalid choice. Please select a number from the list."
-    fi
-  done
+  # Prompt user to select an interface using whiptail
+  choice=$(whiptail --title "Select Network Interface" --menu "Select the network interface you want to use:" 15 60 8 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+  
+  if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
+    NET_IF="${interfaces[$((choice - 1))]}"
+    echo "[[LOG]] Selected network interface: $NET_IF"
+  else
+    echo "No network interface selected or invalid selection. Exiting."
+    exit 1
+  fi
+}
+
+show_installation_summary() {
+  # Skip confirmation if INTERACTIVE is false
+  if [[ "$INTERACTIVE" == "false" ]]; then
+    echo "[[LOG]] Running in non-interactive mode, proceeding with installation..."
+    return
+  fi
+  
+  # Build summary message
+  addon_display="None"
+  case "$ADDON" in
+    "pve") addon_display="Proxmox Virtual Environment" ;;
+    "pbs") addon_display="Proxmox Backup Server" ;;
+    "pmg") addon_display="Proxmox Mail Gateway" ;;
+    *) addon_display="None" ;;
+  esac
+  
+  summary="Configuration Summary:\n\n"
+  summary+="Addon: $addon_display\n"
+  summary+="Hostname: ${HOSTNAME:-[NOT SET]}\n"
+  summary+="Root Password: ${ROOT_PASSWORD:+[SET]}\n"
+  summary+="Encryption Passphrase: ${ENC_PHRASE:+[SET]}\n"
+  summary+="SSH Key: ${SSH_KEY:-[NOT SET]}\n"
+  summary+="Boot Device: ${BOOT_DEVICE:-[NOT SELECTED]}\n"
+  summary+="Pool Device: ${POOL_DEVICE:-[NOT SELECTED]}\n"
+  summary+="Network Interface: ${NET_IF:-[NOT SELECTED]}\n"
+  summary+="Timezone: $TIMEZONE\n"
+  summary+="Locale: $MLANG\n\n"
+  summary+="Proceed with Debian + ZFSBootMenu installation?"
+  
+  # Show confirmation dialog
+  if whiptail --title "Installation Summary" --yesno "$summary" 25 80 3>&1 1>&2 2>&3; then
+    echo "[[LOG]] User confirmed installation. Proceeding..."
+  else
+    echo "[[LOG]] User cancelled installation. Exiting."
+    exit 0
+  fi
 }
 
 configure_apt_sources() {
@@ -378,9 +428,10 @@ final_cleanup() {
 echo "[[LOG]] Starting ZFS Boot Menu installation..."
 echo "[[LOG]] Current kernel version is: $KERNEL_VERSION"
 echo "[[LOG]] OS ID from /etc/os-release is: $ID"
-set_credentials
+set_vars
 select_disk
 select_network_interface
+show_installation_summary
 configure_apt_sources
 install_host_packages
 partition_disk
