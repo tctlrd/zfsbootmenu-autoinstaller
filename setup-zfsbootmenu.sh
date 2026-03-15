@@ -332,6 +332,7 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "[[LOG]] Installing kernel and ZFS packages..."
+	apt full-upgrade -y
 	if [ "$ADDON" = "pve" ]; then
 		apt install -y proxmox-default-headers zfs-initramfs
 		apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION os-prober
