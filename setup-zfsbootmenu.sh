@@ -28,148 +28,148 @@ BOOT_UUID=""
 
 # Override variables with those from install.env file if it exists.
 if [ -f "install.env" ]; then
-    source install.env
-    echo "[[LOG]] Loaded configuration from install.env"
+	source install.env
+	echo "[[LOG]] Loaded configuration from install.env"
 fi
 export DEBIAN_FRONTEND=noninteractive
 
 set_vars(){
-  # Prompt for ADDON selection
-  if [[ -z "$ADDON" ]]; then
-    addon_choice=$(whiptail --title "Select Addon" --menu "Select addon to install:" 15 60 4 \
-      "" "None" \
-      "pve" "Proxmox Virtual Environment" \
-      "pbs" "Proxmox Backup Server" \
-      "pmg" "Proxmox Mail Gateway" 3>&1 1>&2 2>&3)
-    ADDON="$addon_choice"
-  fi
+	# Prompt for ADDON selection
+	if [[ -z "$ADDON" ]]; then
+		addon_choice=$(whiptail --title "Select Addon" --menu "Select addon to install:" 15 60 4 \
+			"" "None" \
+			"pve" "Proxmox Virtual Environment" \
+			"pbs" "Proxmox Backup Server" \
+			"pmg" "Proxmox Mail Gateway" 3>&1 1>&2 2>&3)
+		ADDON="$addon_choice"
+	fi
 
-  # Check if credentials are already set
-  if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
-    echo "[[LOG]] Credentials have been set."
-    echo "[[LOG]] Hostname: $HOSTNAME"
-    echo "[[LOG]] Root password: [SET]"
-    echo "[[LOG]] Encryption passphrase: [SET]"
-    echo "[[LOG]] SSH key: $SSH_KEY"
-    return
-  fi
-  
-  # Prompt user for variables using whiptail
-  [[ -z "$HOSTNAME" ]] && HOSTNAME=$(whiptail --inputbox "Enter hostname for this system:" 10 60 "" 3>&1 1>&2 2>&3)
-  [[ -z "$ROOT_PASSWORD" ]] && ROOT_PASSWORD=$(whiptail --passwordbox "Enter root password:" 10 60 3>&1 1>&2 2>&3)
-  [[ -z "$ENC_PHRASE" ]] && ENC_PHRASE=$(whiptail --passwordbox "Enter encryption passphrase:" 10 60 3>&1 1>&2 2>&3)
-  [[ -z "$SSH_KEY" ]] && SSH_KEY=$(whiptail --inputbox "Enter SSH public key:" 10 60 3>&1 1>&2 2>&3)
+	# Check if credentials are already set
+	if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
+		echo "[[LOG]] Credentials have been set."
+		echo "[[LOG]] Hostname: $HOSTNAME"
+		echo "[[LOG]] Root password: [SET]"
+		echo "[[LOG]] Encryption passphrase: [SET]"
+		echo "[[LOG]] SSH key: $SSH_KEY"
+		return
+	fi
+	
+	# Prompt user for variables using whiptail
+	[[ -z "$HOSTNAME" ]] && HOSTNAME=$(whiptail --inputbox "Enter hostname for this system:" 10 60 "" 3>&1 1>&2 2>&3)
+	[[ -z "$ROOT_PASSWORD" ]] && ROOT_PASSWORD=$(whiptail --passwordbox "Enter root password:" 10 60 3>&1 1>&2 2>&3)
+	[[ -z "$ENC_PHRASE" ]] && ENC_PHRASE=$(whiptail --passwordbox "Enter encryption passphrase:" 10 60 3>&1 1>&2 2>&3)
+	[[ -z "$SSH_KEY" ]] && SSH_KEY=$(whiptail --inputbox "Enter SSH public key:" 10 60 3>&1 1>&2 2>&3)
   
 }
 
 select_disk() {
-  # Check if disk is already selected
-  if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
-    echo "[[LOG]] Boot device is $BOOT_DEVICE"
-    echo "[[LOG]] Pool device is $POOL_DEVICE"
-    return
-  fi
-  
-  echo "[[LOG]] Available disks:"
-  # List available disks with lsblk and store them in an array
-  mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
+	# Check if disk is already selected
+	if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
+		echo "[[LOG]] Boot device is $BOOT_DEVICE"
+		echo "[[LOG]] Pool device is $POOL_DEVICE"
+		return
+	fi
+	
+	echo "[[LOG]] Available disks:"
+	# List available disks with lsblk and store them in an array
+	mapfile -t disks < <(lsblk -dn -o NAME,ID-LINK,TYPE,SIZE | grep 'disk' | awk '{print $1,$2,$3,$4}')
 
-  # Build whiptail menu options
-  menu_options=()
-  for i in "${!disks[@]}"; do
-    menu_options+=("$((i + 1))" "${disks[i]}")
-  done
+	# Build whiptail menu options
+	menu_options=()
+	for i in "${!disks[@]}"; do
+		menu_options+=("$((i + 1))" "${disks[i]}")
+	done
 
-  # Prompt user to select a disk using whiptail
-  choice=$(whiptail --title "Select Disk" --menu "Select the disk you want to use:" 20 80 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
-  
-  if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
-    # Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
-    selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
-    BOOT_DISK="/dev/disk/by-id/$selected_disk"
-    POOL_DISK="/dev/disk/by-id/$selected_disk"
-    BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
-    POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
-    echo "[[LOG]] Selected boot disk: $BOOT_DISK"
-  else
-    echo "No disk selected or invalid selection. Exiting."
-    exit 1
-  fi
-  
-  echo "[[LOG]] Boot device is set to $BOOT_DEVICE"
-  echo "[[LOG]] Pool device is set to $POOL_DEVICE"
+	# Prompt user to select a disk using whiptail
+	choice=$(whiptail --title "Select Disk" --menu "Select the disk you want to use:" 20 80 10 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+	
+	if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#disks[@]} ]]; then
+		# Get the selected disk name (e.g., 'sda' from 'sda 500G disk')
+		selected_disk=$(echo "${disks[$((choice - 1))]}" | awk '{print $2}')
+		BOOT_DISK="/dev/disk/by-id/$selected_disk"
+		POOL_DISK="/dev/disk/by-id/$selected_disk"
+		BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
+		POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
+		echo "[[LOG]] Selected boot disk: $BOOT_DISK"
+	else
+		echo "No disk selected or invalid selection. Exiting."
+		exit 1
+	fi
+	
+	echo "[[LOG]] Boot device is set to $BOOT_DEVICE"
+	echo "[[LOG]] Pool device is set to $POOL_DEVICE"
 }
 
 select_network_interface() {
-  # Check if network interface is already selected
-  if [[ -n "$NET_IF" ]]; then
-    echo "[[LOG]] Network interface selected: $NET_IF"
-    return
-  fi
-  
-  echo "[[LOG]] Available network interfaces:"
-  # List available network interfaces and store them in an array
-  mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
+	# Check if network interface is already selected
+	if [[ -n "$NET_IF" ]]; then
+		echo "[[LOG]] Network interface selected: $NET_IF"
+		return
+	fi
+	
+	echo "[[LOG]] Available network interfaces:"
+	# List available network interfaces and store them in an array
+	mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
 
-  # Build whiptail menu options
-  menu_options=()
-  for i in "${!interfaces[@]}"; do
-    menu_options+=("$((i + 1))" "${interfaces[i]}")
-  done
+	# Build whiptail menu options
+	menu_options=()
+	for i in "${!interfaces[@]}"; do
+		menu_options+=("$((i + 1))" "${interfaces[i]}")
+	done
 
-  # Prompt user to select an interface using whiptail
-  choice=$(whiptail --title "Select Network Interface" --menu "Select the network interface you want to use:" 15 60 8 "${menu_options[@]}" 3>&1 1>&2 2>&3)
-  
-  if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
-    NET_IF="${interfaces[$((choice - 1))]}"
-    echo "[[LOG]] Selected network interface: $NET_IF"
-  else
-    echo "No network interface selected or invalid selection. Exiting."
-    exit 1
-  fi
+	# Prompt user to select an interface using whiptail
+	choice=$(whiptail --title "Select Network Interface" --menu "Select the network interface you want to use:" 15 60 8 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+	
+	if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
+		NET_IF="${interfaces[$((choice - 1))]}"
+		echo "[[LOG]] Selected network interface: $NET_IF"
+	else
+		echo "No network interface selected or invalid selection. Exiting."
+		exit 1
+	fi
 }
 
 show_installation_summary() {
-  # Skip confirmation if INTERACTIVE is false
-  if [[ "$INTERACTIVE" == "false" ]]; then
-    echo "[[LOG]] Running in non-interactive mode, proceeding with installation..."
-    return
-  fi
-  
-  # Build summary message
-  addon_display="None"
-  case "$ADDON" in
-    "pve") addon_display="Proxmox Virtual Environment" ;;
-    "pbs") addon_display="Proxmox Backup Server" ;;
-    "pmg") addon_display="Proxmox Mail Gateway" ;;
-    *) addon_display="None" ;;
-  esac
-  
-  summary="Configuration Summary:\n\n"
-  summary+="Addon: $addon_display\n"
-  summary+="Hostname: ${HOSTNAME:-[NOT SET]}\n"
-  summary+="Root Password: ${ROOT_PASSWORD:+[SET]}\n"
-  summary+="Encryption Passphrase: ${ENC_PHRASE:+[SET]}\n"
-  summary+="SSH Key: ${SSH_KEY:-[NOT SET]}\n"
-  summary+="Boot Device: ${BOOT_DEVICE:-[NOT SELECTED]}\n"
-  summary+="Pool Device: ${POOL_DEVICE:-[NOT SELECTED]}\n"
-  summary+="Network Interface: ${NET_IF:-[NOT SELECTED]}\n"
-  summary+="Timezone: $TIMEZONE\n"
-  summary+="Locale: $MLANG\n\n"
-  summary+="Proceed with Debian + ZFSBootMenu installation?"
-  
-  # Show confirmation dialog
-  if whiptail --title "Installation Summary" --yesno "$summary" 25 80 3>&1 1>&2 2>&3; then
-    echo "[[LOG]] User confirmed installation. Proceeding..."
-  else
-    echo "[[LOG]] User cancelled installation. Exiting."
-    exit 0
-  fi
+	# Skip confirmation if INTERACTIVE is false
+	if [[ "$INTERACTIVE" == "false" ]]; then
+		echo "[[LOG]] Running in non-interactive mode, proceeding with installation..."
+		return
+	fi
+	
+	# Build summary message
+	addon_display="None"
+	case "$ADDON" in
+		"pve") addon_display="Proxmox Virtual Environment" ;;
+		"pbs") addon_display="Proxmox Backup Server" ;;
+		"pmg") addon_display="Proxmox Mail Gateway" ;;
+		*) addon_display="None" ;;
+	esac
+	
+	summary="Configuration Summary:\n\n"
+	summary+="Addon: $addon_display\n"
+	summary+="Hostname: ${HOSTNAME:-[NOT SET]}\n"
+	summary+="Root Password: ${ROOT_PASSWORD:+[SET]}\n"
+	summary+="Encryption Passphrase: ${ENC_PHRASE:+[SET]}\n"
+	summary+="SSH Key: ${SSH_KEY:-[NOT SET]}\n"
+	summary+="Boot Device: ${BOOT_DEVICE:-[NOT SELECTED]}\n"
+	summary+="Pool Device: ${POOL_DEVICE:-[NOT SELECTED]}\n"
+	summary+="Network Interface: ${NET_IF:-[NOT SELECTED]}\n"
+	summary+="Timezone: $TIMEZONE\n"
+	summary+="Locale: $MLANG\n\n"
+	summary+="Proceed with Debian + ZFSBootMenu installation?"
+	
+	# Show confirmation dialog
+	if whiptail --title "Installation Summary" --yesno "$summary" 25 80 3>&1 1>&2 2>&3; then
+		echo "[[LOG]] User confirmed installation. Proceeding..."
+	else
+		echo "[[LOG]] User cancelled installation. Exiting."
+		exit 0
+	fi
 }
 
 configure_apt_sources() {
-  echo "[[LOG]] Configuring APT sources..."
-  cat > /etc/apt/sources.list <<EOF
+	echo "[[LOG]] Configuring APT sources..."
+	cat > /etc/apt/sources.list <<EOF
 deb http://deb.debian.org/debian trixie main contrib non-free-firmware
 deb-src http://deb.debian.org/debian trixie main contrib non-free-firmware
 
@@ -182,8 +182,8 @@ EOF
 }
 
 install_host_packages() {
-  echo "[[LOG]] Installing necessary packages"
-  apt update
+	echo "[[LOG]] Installing necessary packages"
+	apt update
 	apt full-upgrade -y
 	#if [ "$ADDON" = "pve" ]; then
 	#	apt install -y debootstrap gdisk dosfstools dkms proxmox-default-headers
@@ -191,88 +191,88 @@ install_host_packages() {
 	#else
 	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
 	#fi
-  apt install -y zfsutils-linux
+	apt install -y zfsutils-linux
 }
 
 partition_disk() {
-  zgenhostid -f 0x00bab10c
-  zpool labelclear -f "$POOL_DISK"
-  wipefs -a "$POOL_DISK"
-  wipefs -a "$BOOT_DISK"
-  sgdisk --zap-all "$POOL_DISK"
-  sgdisk --zap-all "$BOOT_DISK"
-  sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
-  sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
-  sleep 2
-  count=0
-  while [ ! -e "$POOL_DEVICE" ]; do
-    echo "[[LOG]] Waiting for pool device to appear: $POOL_DEVICE"
-    sleep 1
-    count=$((count + 1))
-    if [ $count -ge 5 ]; then
-      echo "[[LOG]] Timeout waiting for pool device"
-      exit 1
-    fi
-  done
-  echo "[[LOG]] Pool device found: $POOL_DEVICE"
-  # Format boot partition early to get UUID
-  echo "[[LOG]] Formatting boot partition..."
-  mkfs.vfat -F32 "$BOOT_DEVICE"
-  # Get UUID after formatting
-  BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
-  echo "[[LOG]] Boot UUID after formatting: $BOOT_UUID"
+	zgenhostid -f 0x00bab10c
+	zpool labelclear -f "$POOL_DISK"
+	wipefs -a "$POOL_DISK"
+	wipefs -a "$BOOT_DISK"
+	sgdisk --zap-all "$POOL_DISK"
+	sgdisk --zap-all "$BOOT_DISK"
+	sgdisk -n "${BOOT_PART}:1m:+512m" -t "${BOOT_PART}:ef00" "$BOOT_DISK"
+	sgdisk -n "${POOL_PART}:0:-10m" -t "${POOL_PART}:bf00" "$POOL_DISK"
+	sleep 2
+	count=0
+	while [ ! -e "$POOL_DEVICE" ]; do
+		echo "[[LOG]] Waiting for pool device to appear: $POOL_DEVICE"
+		sleep 1
+		count=$((count + 1))
+		if [ $count -ge 5 ]; then
+			echo "[[LOG]] Timeout waiting for pool device"
+			exit 1
+		fi
+	done
+	echo "[[LOG]] Pool device found: $POOL_DEVICE"
+	# Format boot partition early to get UUID
+	echo "[[LOG]] Formatting boot partition..."
+	mkfs.vfat -F32 "$BOOT_DEVICE"
+	# Get UUID after formatting
+	BOOT_UUID=$(blkid -s UUID -o value "$BOOT_DEVICE")
+	echo "[[LOG]] Boot UUID after formatting: $BOOT_UUID"
 }
 
 create_zpool() {
-  echo "$ENC_PHRASE" > /etc/zfs/zroot.key
-  chmod 000 /etc/zfs/zroot.key
-  echo "[[LOG]] Creating ZFS pool and datasets..."
-  zpool create -f -o ashift=12 \
-  -O compression=lz4 \
-  -O acltype=posixacl \
-  -O xattr=sa \
-  -O relatime=on \
-  -O encryption=aes-256-gcm \
-  -O keylocation=file:///etc/zfs/zroot.key \
-  -O keyformat=passphrase \
-  -o autotrim=on \
-  -o compatibility=openzfs-2.2-linux \
-  -m none $POOL_NAME "$POOL_DEVICE"
-  zfs create -o mountpoint=none $POOL_NAME/ROOT
-  zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
-  zfs create -o mountpoint=/home $POOL_NAME/home
-  zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
+	echo "$ENC_PHRASE" > /etc/zfs/zroot.key
+	chmod 000 /etc/zfs/zroot.key
+	echo "[[LOG]] Creating ZFS pool and datasets..."
+	zpool create -f -o ashift=12 \
+	-O compression=lz4 \
+	-O acltype=posixacl \
+	-O xattr=sa \
+	-O relatime=on \
+	-O encryption=aes-256-gcm \
+	-O keylocation=file:///etc/zfs/zroot.key \
+	-O keyformat=passphrase \
+	-o autotrim=on \
+	-o compatibility=openzfs-2.2-linux \
+	-m none $POOL_NAME "$POOL_DEVICE"
+	zfs create -o mountpoint=none $POOL_NAME/ROOT
+	zfs create -o mountpoint=/ -o canmount=noauto $POOL_NAME/ROOT/$ID
+	zfs create -o mountpoint=/home $POOL_NAME/home
+	zpool set bootfs=$POOL_NAME/ROOT/$ID $POOL_NAME
 }
 
 export_import_zpool() {
-  echo "[[LOG]] Exporting and re-importing ZFS pool for mounting..."
-  zpool export $POOL_NAME
-  zpool import -N -R $MNT_P $POOL_NAME
-  zfs load-key -L file:///etc/zfs/zroot.key $POOL_NAME
-  zfs mount $POOL_NAME/ROOT/${ID}
-  zfs mount $POOL_NAME/home
-  echo "[[LOG]] CURRENT MOUNTS:"
-  mount | grep mnt
-  udevadm trigger
+	echo "[[LOG]] Exporting and re-importing ZFS pool for mounting..."
+	zpool export $POOL_NAME
+	zpool import -N -R $MNT_P $POOL_NAME
+	zfs load-key -L file:///etc/zfs/zroot.key $POOL_NAME
+	zfs mount $POOL_NAME/ROOT/${ID}
+	zfs mount $POOL_NAME/home
+	echo "[[LOG]] CURRENT MOUNTS:"
+	mount | grep mnt
+	udevadm trigger
 }
 
 setup_base_system() {
-  echo "[[LOG]] Installing base system with debootstrap..."
-  debootstrap trixie $MNT_P
-  cp /etc/hostid $MNT_P/etc/hostid
-  cp /etc/resolv.conf $MNT_P/etc/resolv.conf
-  case "$ADDON" in pve|pmg|pbs)
-    wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O $MNT_P/usr/share/keyrings/proxmox-archive-keyring.gpg
-    ;;
-  esac
+	echo "[[LOG]] Installing base system with debootstrap..."
+	debootstrap trixie $MNT_P
+	cp /etc/hostid $MNT_P/etc/hostid
+	cp /etc/resolv.conf $MNT_P/etc/resolv.conf
+	case "$ADDON" in pve|pmg|pbs)
+		wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O $MNT_P/usr/share/keyrings/proxmox-archive-keyring.gpg
+		;;
+	esac
 }
 
 prepare_chroot() {
-  echo "[[LOG]] Mounting filesystems for chroot environment..."
-  mount -t proc proc $MNT_P/proc
-  mount -t sysfs sys $MNT_P/sys
-  mount -B /dev $MNT_P/dev
-  mount -t devpts pts $MNT_P/dev/pts
+	echo "[[LOG]] Mounting filesystems for chroot environment..."
+	mount -t proc proc $MNT_P/proc
+	mount -t sysfs sys $MNT_P/sys
+	mount -B /dev $MNT_P/dev
+	mount -t devpts pts $MNT_P/dev/pts
 }
 
 enter_chroot() {
@@ -472,9 +472,9 @@ enter_chroot() {
 }
 
 final_cleanup() {
-  echo "[[LOG]] Exporting ZFS pool and completing installation..."
-  umount -n -R /mnt
-  zpool export -a
+	echo "[[LOG]] Exporting ZFS pool and completing installation..."
+	umount -n -R /mnt
+	zpool export -a
 }
 
 # Execution sequence
