@@ -257,7 +257,7 @@ setup_base_system() {
   cp /etc/hostid $MNT_P/etc/hostid
   cp /etc/resolv.conf $MNT_P/etc/resolv.conf
   case "$ADDON" in pve|pmg|pbs)
-    wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O /usr/share/keyrings/proxmox-archive-keyring.gpg
+    wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O $MNT_P/usr/share/keyrings/proxmox-archive-keyring.gpg
     ;;
   esac
 }
