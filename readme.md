@@ -21,7 +21,7 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    Boot into your live environment, open a terminal, run the following to start the script
 
    ```bash
-   wget https://raw.githubusercontent.com/sartirious/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
+   wget https://raw.githubusercontent.com/tctlrd/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
    chmod +x setup-zfsbootmenu.sh
    ./setup-zfsbootmenu.sh
    ```
