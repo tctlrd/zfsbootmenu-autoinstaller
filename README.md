@@ -64,7 +64,7 @@ You can modify these defaults directly in the script if needed.
 
 ## Troubleshooting
 
-- **Permissions**: Run the script with `sudo` to ensure it has the necessary permissions.
+- **Permissions**: Run the script under root user to ensure it has the necessary permissions.
 - **Disk Selection**: If no suitable disks are shown, confirm your disks are properly detected (`lsblk` can help).
 
 ## License
