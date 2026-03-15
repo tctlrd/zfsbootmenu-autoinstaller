@@ -447,7 +447,6 @@ enter_chroot() {
 		echo "./setup-pbs.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pmg" ]; then
 		# apt install -y proxmox-mailgateway-container
-		# apt install -y proxmox-backup-server
 		cat > /root/setup-pmg.sh <<- EOF_SETPMG
 		#!/bin/bash
 		apt install -y proxmox-mailgateway
