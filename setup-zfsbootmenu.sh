@@ -395,9 +395,9 @@ enter_chroot() {
 	# Install Proxmox packages based on addon
 	if [ "$ADDON" = "pve" ]; then
 		apt install -y proxmox-ve postfix open-iscsi chrony
-	else if [ "$ADDON" = "pbs" ]; then
+	elif [ "$ADDON" = "pbs" ]; then
 		apt install -y proxmox-backup-server
-	else if [ "$ADDON" = "pmg" ]; then
+	elif [ "$ADDON" = "pmg" ]; then
 		apt install -y proxmox-mailgateway
 	fi
 
