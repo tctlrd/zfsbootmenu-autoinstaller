@@ -2,7 +2,7 @@
 
 # Optionally set variables here or override variables with those from install.env file.
 INTERACTIVE=true
-ADDON="none" # optional: pve, pbs, pmg (proxmox: virtual environment, backup server, mail gateway)
+ADDON="" # optional: pve, pbs, pmg (proxmox: virtual environment, backup server, mail gateway)
 MLANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
 #NET_IF=""
