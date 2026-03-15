@@ -50,9 +50,9 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
 
 This script sets default variables for installation, including:
 
-- `BOOT_DISK`: Device for the boot partition (default `/dev/nvme0n1`)
-- `POOL_DISK`: Device for the ZFS pool (default `/dev/nvme0n1`)
-- `POOL_NAME`: Name of the ZFS pool (default `zroot`)
+- `BOOT_DISK`: Device for the boot partition.
+- `POOL_DISK`: Device for the ZFS pool.
+- `POOL_NAME`: Name of the ZFS pool.
 
 You can modify these defaults directly in the script if needed.
 
