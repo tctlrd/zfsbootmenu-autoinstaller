@@ -218,7 +218,6 @@ configure_apt_sources() {
 install_host_packages() {
 	echo "[[LOG]] Installing necessary packages"
 	apt update
-	apt full-upgrade -y
 	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
 	apt install -y zfsutils-linux
 }
