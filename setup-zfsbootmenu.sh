@@ -185,7 +185,12 @@ install_host_packages() {
   echo "[[LOG]] Installing necessary packages"
   apt update
 	apt full-upgrade -y
-  apt install -y debootstrap gdisk dosfstools dkms linux-headers-$(uname -r)
+	if [ "$ADDON" = "pve" ]; then
+		apt install -y debootstrap gdisk dosfstools dkms proxmox-default-headers
+		apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION
+	else
+		apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
+	fi
   apt install -y zfsutils-linux
 }
 
@@ -344,7 +349,8 @@ enter_chroot() {
 	# Install kernel and ZFS packages
 	echo "[[LOG]] Installing kernel and ZFS packages..."
 	if [ "$ADDON" = "pve" ]; then
-		apt install -y linux-headers-amd64 proxmox-default-kernel zfs-initramfs
+		apt install -y proxmox-default-headers zfs-initramfs
+		apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION os-prober
 	else
 		apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	fi
@@ -453,6 +459,7 @@ enter_chroot() {
 
 	# Configure EFI boot entries
 	echo "[[LOG]] Configuring EFI boot entries..."
+	for num in $(efibootmgr | grep -oE 'Boot0[0-9A-F]+' | sed 's/Boot//'); do efibootmgr -B -b $num; done
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
