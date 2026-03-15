@@ -22,7 +22,6 @@ BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
 POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
 POOL_NAME="zroot"
 MNT_P="/mnt"
-KERNEL_VERSION=$(uname -r)  # Automatically get current kernel version
 ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
 BOOT_UUID=""
 
@@ -218,7 +217,7 @@ configure_apt_sources() {
 install_host_packages() {
 	echo "[[LOG]] Installing necessary packages"
 	apt update
-	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
+	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$(uname -r)
 	apt install -y zfsutils-linux
 }
 
@@ -335,7 +334,6 @@ enter_chroot() {
 	apt full-upgrade -y
 	if [ "$ADDON" = "pve" ]; then
 		apt install -y proxmox-default-headers zfs-initramfs
-		apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION os-prober
 	else
 		apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	fi
@@ -469,7 +467,7 @@ final_cleanup() {
 
 # Execution sequence
 echo "[[LOG]] Starting ZFS Boot Menu installation..."
-echo "[[LOG]] Current kernel version is: $KERNEL_VERSION"
+echo "[[LOG]] Current kernel version is: $(uname -r)"
 echo "[[LOG]] OS ID from /etc/os-release is: $ID"
 set_vars
 select_disk
