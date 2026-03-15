@@ -169,6 +169,7 @@ show_installation_summary() {
 
 configure_apt_sources() {
 	echo "[[LOG]] Configuring APT sources..."
+	rm -f /etc/apt/sources.list
 	cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
 	Types: deb deb-src
 	URIs: http://deb.debian.org/debian/
@@ -217,14 +218,9 @@ configure_apt_sources() {
 install_host_packages() {
 	echo "[[LOG]] Installing necessary packages"
 	apt update
-	if [ "$ADDON" = "pve" ]; then
-		apt install -y debootstrap gdisk dosfstools dkms proxmox-default-headers
-		apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION
-	else
-		apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
-	fi
-	apt full-upgrade -y
+	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
 	apt install -y zfsutils-linux
+	apt full-upgrade -y
 }
 
 partition_disk() {
@@ -321,7 +317,7 @@ enter_chroot() {
 	echo "$SSH_KEY" > /root/.ssh/authorized_keys
 	chmod 700 /root/.ssh
 	chmod 600 /root/.ssh/authorized_keys
-	rm /etc/apt/sources.list
+	rm -f /etc/apt/sources.list
 
 	# Update and install necessary packages
 	export LC_ALL=C
