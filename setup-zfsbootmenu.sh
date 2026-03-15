@@ -425,6 +425,7 @@ enter_chroot() {
 	if [ "$ADDON" = "pve" ]; then
 		cat > /root/setup-pve.sh <<- EOF_SETPVE
 		#!/bin/bash
+		apt update
 		apt install -y proxmox-ve postfix open-iscsi chrony
 		apt remove -y linux-image-amd64 'linux-image-6.12*'
 		apt autoremove -y
@@ -437,6 +438,7 @@ enter_chroot() {
 	elif [ "$ADDON" = "pbs" ]; then
 		cat > /root/setup-pbs.sh <<- EOF_SETPBS
 		#!/bin/bash
+		apt update
 		apt install -y proxmox-backup
 		apt remove -y linux-image-amd64 'linux-image-6.12*'
 		apt autoremove -y
@@ -449,6 +451,7 @@ enter_chroot() {
 	elif [ "$ADDON" = "pmg" ]; then
 		cat > /root/setup-pmg.sh <<- EOF_SETPMG
 		#!/bin/bash
+		apt update
 		apt install -y proxmox-mailgateway
 		apt remove -y linux-image-amd64 'linux-image-6.12*'
 		apt autoremove -y
