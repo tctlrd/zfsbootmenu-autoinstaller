@@ -187,7 +187,6 @@ configure_apt_sources() {
 install_host_packages() {
 	echo "[[LOG]] Installing necessary packages"
 	apt update
-	apt full-upgrade -y
 	apt install -y debootstrap gdisk dosfstools linux-headers-$(uname -r)
 	apt install -y zfsutils-linux
 }
