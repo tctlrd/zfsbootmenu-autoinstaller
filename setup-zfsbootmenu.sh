@@ -416,7 +416,7 @@ enter_chroot() {
 		/etc/zfsbootmenu/config.yaml
 
 	# Addon setup
-	if [ "$ADDON" =~ ^(pve|pmg|pbs)$ ]; then
+	if [[ "$ADDON" =~ ^(pve|pmg|pbs)$ ]]; then
 		apt-mark hold grub-common grub-pc-bin grub-pc grub2-common os-prober
 		apt install -y proxmox-default-kernel proxmox-default-headers
 	fi
