@@ -256,6 +256,10 @@ setup_base_system() {
   debootstrap trixie $MNT_P
   cp /etc/hostid $MNT_P/etc/hostid
   cp /etc/resolv.conf $MNT_P/etc/resolv.conf
+  case "$ADDON" in pve|pmg|pbs)
+    wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O /usr/share/keyrings/proxmox-archive-keyring.gpg
+    ;;
+  esac
 }
 
 prepare_chroot() {
@@ -297,37 +301,33 @@ enter_chroot() {
 		EOF_APT
 
 	# Add Proxmox repository if addon is pve, pmg, or pbs
-	case "$ADDON" in pve|pmg|pbs)
-			wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O /usr/share/keyrings/proxmox-archive-keyring.gpg
-			if [ "$ADDON" = "pve" ]; then
-				cat > /etc/apt/sources.list.d/proxmox.sources <<-EOF_PVE
-				Types: deb
-				URIs: http://download.proxmox.com/debian/pve
-				Suites: trixie
-				Components: pve-no-subscription
-				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-				EOF_PVE
-			fi
-			if [ "$ADDON" = "pbs" ]; then
-				cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PBS
-				Types: deb
-				URIs: http://download.proxmox.com/debian/pbs
-				Suites: trixie
-				Components: pbs-no-subscription
-				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-				EOF_PBS
-			fi
-			if [ "$ADDON" = "pmg" ]; then
-				cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PMG
-				Types: deb
-				URIs: http://download.proxmox.com/debian/pmg
-				Suites: trixie
-				Components: pmg-no-subscription
-				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-				EOF_PMG
-			fi
-			;;
-	esac
+	if [ "$ADDON" = "pve" ]; then
+		cat > /etc/apt/sources.list.d/proxmox.sources <<-EOF_PVE
+		Types: deb
+		URIs: http://download.proxmox.com/debian/pve
+		Suites: trixie
+		Components: pve-no-subscription
+		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+		EOF_PVE
+	fi
+	if [ "$ADDON" = "pbs" ]; then
+		cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PBS
+		Types: deb
+		URIs: http://download.proxmox.com/debian/pbs
+		Suites: trixie
+		Components: pbs-no-subscription
+		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+		EOF_PBS
+	fi
+	if [ "$ADDON" = "pmg" ]; then
+		cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PMG
+		Types: deb
+		URIs: http://download.proxmox.com/debian/pmg
+		Suites: trixie
+		Components: pmg-no-subscription
+		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+		EOF_PMG
+	fi
 
 	# Update and install necessary packages
 	export LC_ALL=C
