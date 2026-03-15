@@ -37,7 +37,7 @@ set_vars(){
 	# Prompt for ADDON selection
 	if [[ -z "$ADDON" ]]; then
 		addon_choice=$(whiptail --title "Select Addon" --menu "Select addon to install:" 15 60 4 \
-			"" "None" \
+			"" "None - (standard Debian without an addon)" \
 			"pve" "Proxmox Virtual Environment" \
 			"pbs" "Proxmox Backup Server" \
 			"pmg" "Proxmox Mail Gateway" 3>&1 1>&2 2>&3)
