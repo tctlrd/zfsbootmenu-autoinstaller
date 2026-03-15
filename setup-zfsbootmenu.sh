@@ -400,7 +400,7 @@ enter_chroot() {
 	elif [ "$ADDON" = "pbs" ]; then
 		apt install -y proxmox-backup-server
 	elif [ "$ADDON" = "pmg" ]; then
-		apt install -y proxmox-mailgateway
+		apt install -y proxmox-mailgateway-container
 	fi
 
 	# Install ZFSBootMenu
@@ -461,9 +461,11 @@ enter_chroot() {
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
 
 	# Configure network
-	echo "[[LOG]] Configuring network for DHCP on $NET_IF."
-	echo "auto $NET_IF" >> /etc/network/interfaces
-	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
+	if [[ ! "$ADDON" =~ ^(pve|pmg|pbs)$ ]]; then
+		echo "[[LOG]] Configuring network for DHCP on $NET_IF."
+		echo "auto $NET_IF" >> /etc/network/interfaces
+		echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
+	fi
 	EOF
 }
 
