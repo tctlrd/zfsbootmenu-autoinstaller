@@ -295,39 +295,39 @@ enter_chroot() {
 		Components: main non-free-firmware contrib
 		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 		EOF_APT
-  
-  # Add Proxmox repository if addon is pve, pmg, or pbs
-  case "$ADDON" in pve|pmg|pbs)
-      wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O /usr/share/keyrings/proxmox-archive-keyring.gpg
-      if [ "$ADDON" = "pve" ]; then
-        cat > /etc/apt/sources.list.d/proxmox.sources <<-EOF_PVE
-        Types: deb
-        URIs: http://download.proxmox.com/debian/pve
-        Suites: trixie
-        Components: pve-no-subscription
-        Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-        EOF_PVE
-      fi
-      if [ "$ADDON" = "pbs" ]; then
-        cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PBS
-        Types: deb
-        URIs: http://download.proxmox.com/debian/pbs
-        Suites: trixie
-        Components: pbs-no-subscription
-        Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-        EOF_PBS
-      fi
-      if [ "$ADDON" = "pmg" ]; then
-        cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PMG
-        Types: deb
-        URIs: http://download.proxmox.com/debian/pmg
-        Suites: trixie
-        Components: pmg-no-subscription
-        Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-        EOF_PMG
-      fi
-      ;;
-  esac
+
+	# Add Proxmox repository if addon is pve, pmg, or pbs
+	case "$ADDON" in pve|pmg|pbs)
+			wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg -O /usr/share/keyrings/proxmox-archive-keyring.gpg
+			if [ "$ADDON" = "pve" ]; then
+				cat > /etc/apt/sources.list.d/proxmox.sources <<-EOF_PVE
+				Types: deb
+				URIs: http://download.proxmox.com/debian/pve
+				Suites: trixie
+				Components: pve-no-subscription
+				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+				EOF_PVE
+			fi
+			if [ "$ADDON" = "pbs" ]; then
+				cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PBS
+				Types: deb
+				URIs: http://download.proxmox.com/debian/pbs
+				Suites: trixie
+				Components: pbs-no-subscription
+				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+				EOF_PBS
+			fi
+			if [ "$ADDON" = "pmg" ]; then
+				cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PMG
+				Types: deb
+				URIs: http://download.proxmox.com/debian/pmg
+				Suites: trixie
+				Components: pmg-no-subscription
+				Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+				EOF_PMG
+			fi
+			;;
+	esac
 
 	# Update and install necessary packages
 	export LC_ALL=C
@@ -343,11 +343,11 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "[[LOG]] Installing kernel and ZFS packages..."
-  if [ "$ADDON" = "pve" ]; then
-    apt install -y linux-headers-amd64 proxmox-default-kernel zfs-initramfs
-  else
-    apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
-  fi
+	if [ "$ADDON" = "pve" ]; then
+		apt install -y linux-headers-amd64 proxmox-default-kernel zfs-initramfs
+	else
+		apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
+	fi
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
 
@@ -392,14 +392,14 @@ enter_chroot() {
 	ssh \
 	dropbear-bin
 
-  # Install Proxmox packages based on addon
-  if [ "$ADDON" = "pve" ]; then
-    apt install -y proxmox-ve postfix open-iscsi chrony
-  else if [ "$ADDON" = "pbs" ]; then
-    apt install -y proxmox-backup-server
-  else if [ "$ADDON" = "pmg" ]; then
-    apt install -y proxmox-mailgateway
-  fi
+	# Install Proxmox packages based on addon
+	if [ "$ADDON" = "pve" ]; then
+		apt install -y proxmox-ve postfix open-iscsi chrony
+	else if [ "$ADDON" = "pbs" ]; then
+		apt install -y proxmox-backup-server
+	else if [ "$ADDON" = "pmg" ]; then
+		apt install -y proxmox-mailgateway
+	fi
 
 	# Install ZFSBootMenu
 	echo "[[LOG]] Installing ZFSBootMenu."
@@ -439,9 +439,9 @@ enter_chroot() {
 	# Configure ZFSBootMenu
 	echo "[[LOG]] Configuring ZFSBootMenu."
 	sed -i -e 's/^  ManageImages: false$/  ManageImages: true/' \
-	  -e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
-	  -e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
-	  /etc/zfsbootmenu/config.yaml
+		-e '/^Components:/,/^[^ ]/ s/^  Enabled: true$/  Enabled: false/' \
+		-e '/^EFI:/,/^[^ ]/ s/^  Enabled: false$/  Enabled: true/' \
+		/etc/zfsbootmenu/config.yaml
 
 	# Generate ZFSBootMenu
 	echo "[[LOG]] Generating ZFSBootMenu."
