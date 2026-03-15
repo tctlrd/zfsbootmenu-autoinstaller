@@ -424,8 +424,9 @@ enter_chroot() {
 			apt install -y proxmox-ve postfix open-iscsi chrony
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
+			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
 			echo "Proxmox VE installation complete. Reboot to finish."
-			sed -i '/^./setup-pve.sh/d' /root/.bashrc
+			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
 		chmod +x /root/setup-pve.sh
 		echo "./setup-pve.sh" >> /root/.bashrc
@@ -434,7 +435,6 @@ enter_chroot() {
 	elif [ "$ADDON" = "pmg" ]; then
 		apt install -y proxmox-mailgateway-container
 	fi
-	rm -f /etc/apt/sources.list.d/pve-enterprise.sources
 
 	# Generate ZFSBootMenu
 	echo "[[LOG]] Generating ZFSBootMenu."
