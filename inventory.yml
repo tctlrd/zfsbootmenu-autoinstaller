@@ -1,7 +1,0 @@
-all:
-  hosts:
-    localhost:
-      ansible_connection: local
-    chroot:
-      ansible_connection: community.general.chroot
-      ansible_chroot_path: /mnt

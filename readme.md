@@ -21,17 +21,8 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    Boot into your live environment, open a terminal, run the following to start the script
 
    ```bash
-   sudo su # switches to root
-   apt update
-   apt upgrade
-   apt purge zfs-dkms
-   apt install curl
-   curl -O https://raw.githubusercontent.com/sartirious/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
+   wget https://raw.githubusercontent.com/sartirious/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
    chmod +x setup-zfsbootmenu.sh
-   
-   apt install linux-headers-$(uname -r) zfs-dkms zfsutils-linux
-   dpkg-reconfigure zfs-dkms
-      
    ./setup-zfsbootmenu.sh
    ```
 
@@ -62,7 +53,6 @@ This script sets default variables for installation, including:
 - `BOOT_DISK`: Device for the boot partition (default `/dev/nvme0n1`)
 - `POOL_DISK`: Device for the ZFS pool (default `/dev/nvme0n1`)
 - `POOL_NAME`: Name of the ZFS pool (default `zroot`)
-- `KERNEL_VERSION`: The current kernel version, determined automatically
 
 You can modify these defaults directly in the script if needed.
 
