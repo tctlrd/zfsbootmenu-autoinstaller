@@ -64,6 +64,8 @@ set_vars(){
 select_disk() {
 	# Check if disk is already selected
 	if [[ -n "$BOOT_DISK" && -n "$POOL_DISK" ]]; then
+		BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
+		POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
 		echo "[[LOG]] Boot device is $BOOT_DEVICE"
 		echo "[[LOG]] Pool device is $POOL_DEVICE"
 		return
