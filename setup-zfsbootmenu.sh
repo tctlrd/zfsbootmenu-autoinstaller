@@ -401,7 +401,9 @@ enter_chroot() {
 	echo "[[LOG]] Installing ZFSBootMenu."
 	mkdir -p /usr/local/src/zfsbootmenu
 	cd /usr/local/src/zfsbootmenu
-	curl -L https://get.zfsbootmenu.org/source | tar -zxv --strip-components=1 -f -
+	curl -L https://get.zfsbootmenu.org/source -o zfsbootmenu-source.tar.gz
+	tar -zxv --strip-components=1 -f zfsbootmenu-source.tar.gz
+	rm zfsbootmenu-source.tar.gz
 	make core dracut
 
 	# Install dracut-crypt-ssh
