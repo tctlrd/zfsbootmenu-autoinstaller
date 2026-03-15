@@ -433,7 +433,6 @@ enter_chroot() {
 		chmod +x /root/setup-pve.sh
 		echo "./setup-pve.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pbs" ]; then
-		# apt install -y proxmox-backup-server
 		cat > /root/setup-pbs.sh <<- EOF_SETPBS
 		#!/bin/bash
 		apt install -y proxmox-backup
@@ -446,7 +445,6 @@ enter_chroot() {
 		chmod +x /root/setup-pbs.sh
 		echo "./setup-pbs.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pmg" ]; then
-		# apt install -y proxmox-mailgateway-container
 		cat > /root/setup-pmg.sh <<- EOF_SETPMG
 		#!/bin/bash
 		apt install -y proxmox-mailgateway
