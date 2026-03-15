@@ -416,24 +416,49 @@ enter_chroot() {
 		/etc/zfsbootmenu/config.yaml
 
 	# Addon setup
-	if [ "$ADDON" = "pve" ]; then
+	if [ "$ADDON" =~ ^(pve|pmg|pbs)$ ]; then
 		apt-mark hold grub-common grub-pc-bin grub-pc grub2-common os-prober
 		apt install -y proxmox-default-kernel proxmox-default-headers
-			cat > /root/setup-pve.sh <<- EOF_SETPVE
-			#!/bin/bash
-			apt install -y proxmox-ve postfix open-iscsi chrony
-			apt remove -y linux-image-amd64 'linux-image-6.12*'
-			apt autoremove -y
-			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-			echo "Proxmox VE installation complete. Reboot to finish."
-			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
-			EOF_SETPVE
+	fi
+	if [ "$ADDON" = "pve" ]; then
+		cat > /root/setup-pve.sh <<- EOF_SETPVE
+		#!/bin/bash
+		apt install -y proxmox-ve postfix open-iscsi chrony
+		apt remove -y linux-image-amd64 'linux-image-6.12*'
+		apt autoremove -y
+		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+		echo "Proxmox VE installation complete. Reboot to finish."
+		sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
+		EOF_SETPVE
 		chmod +x /root/setup-pve.sh
 		echo "./setup-pve.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pbs" ]; then
-		apt install -y proxmox-backup-server
+		# apt install -y proxmox-backup-server
+		cat > /root/setup-pbs.sh <<- EOF_SETPBS
+		#!/bin/bash
+		apt install -y proxmox-backup
+		apt remove -y linux-image-amd64 'linux-image-6.12*'
+		apt autoremove -y
+		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+		echo "Proxmox backup server installation complete. Reboot to finish."
+		sed -i '/\.\/setup-pbs\.sh/d' /root/.bashrc
+		EOF_SETPBS
+		chmod +x /root/setup-pbs.sh
+		echo "./setup-pbs.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pmg" ]; then
-		apt install -y proxmox-mailgateway-container
+		# apt install -y proxmox-mailgateway-container
+		# apt install -y proxmox-backup-server
+		cat > /root/setup-pmg.sh <<- EOF_SETPMG
+		#!/bin/bash
+		apt install -y proxmox-mailgateway
+		apt remove -y linux-image-amd64 'linux-image-6.12*'
+		apt autoremove -y
+		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+		echo "Proxmox mail gateway installation complete. Reboot to finish."
+		sed -i '/\.\/setup-pmg\.sh/d' /root/.bashrc
+		EOF_SETPMG
+		chmod +x /root/setup-pmg.sh
+		echo "./setup-pmg.sh" >> /root/.bashrc
 	fi
 
 	# Generate ZFSBootMenu
