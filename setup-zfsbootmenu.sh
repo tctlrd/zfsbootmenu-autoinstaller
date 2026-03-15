@@ -430,13 +430,6 @@ enter_chroot() {
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
-
-	# Configure network
-	if [[ ! "$ADDON" =~ ^(pve|pmg|pbs)$ ]]; then
-		echo "[[LOG]] Configuring network for DHCP on $NET_IF."
-		echo "auto $NET_IF" >> /etc/network/interfaces
-		echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
-	fi
 	
 	# Addon setup
 	if [ "$ADDON" = "pve" ]; then
@@ -456,6 +449,14 @@ enter_chroot() {
 		apt install -y proxmox-mailgateway-container
 	fi
 	rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+
+	# Configure network
+	echo "[[LOG]] Configuring network for DHCP on $NET_IF."
+	
+	# Add network configuration
+	sed -i "/$NET_IF/d" /etc/network/interfaces
+	echo "auto $NET_IF" >> /etc/network/interfaces
+	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 
 	EOF
 }
