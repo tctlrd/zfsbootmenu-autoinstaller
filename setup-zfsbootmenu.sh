@@ -361,7 +361,6 @@ enter_chroot() {
 	git \
 	fzf \
 	curl \
-	make \
 	mbuffer \
 	kexec-tools \
 	efibootmgr \
