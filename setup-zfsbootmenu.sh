@@ -433,7 +433,7 @@ enter_chroot() {
 	# Addon setup
 	if [ "$ADDON" = "pve" ]; then
 		apt-mark hold grub-common grub-pc-bin grub-pc grub2-common os-prober
-		apt install -y proxmox-default-headers
+		apt install -y proxmox-default-kernel proxmox-default-headers
 			cat > /root/setup-pve.sh <<- EOF_SETPVE
 			#!/bin/bash
 			apt install -y proxmox-ve postfix open-iscsi chrony
