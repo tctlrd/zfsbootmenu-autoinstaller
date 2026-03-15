@@ -386,6 +386,7 @@ enter_chroot() {
 	elif [ "$ADDON" = "pmg" ]; then
 		apt install -y proxmox-mailgateway-container
 	fi
+	rm -f /etc/apt/sources.list.d/pve-enterprise.sources
 
 	# Install ZFSBootMenu
 	echo "[[LOG]] Installing ZFSBootMenu."
