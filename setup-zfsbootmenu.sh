@@ -440,7 +440,16 @@ enter_chroot() {
 	
 	# Addon setup
 	if [ "$ADDON" = "pve" ]; then
-		return
+		apt install -y proxmox-default-kernel
+		cat > /root/setup-pve.sh <<- EOF_SETPVE
+		#!/bin/bash
+		apt install -y proxmox-ve postfix open-iscsi chrony
+		apt remove -y linux-image-amd64 'linux-image-6.12*' os-prober
+		echo "Proxmox VE installation complete. Reboot to finish."
+		sed -i '/^./setup-pve.sh/d' /root/.bashrc
+		EOF_SETPVE
+		chmod +x /root/setup-pve.sh
+		echo "./setup-pve.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pbs" ]; then
 		apt install -y proxmox-backup-server
 	elif [ "$ADDON" = "pmg" ]; then
