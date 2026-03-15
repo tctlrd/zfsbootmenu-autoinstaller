@@ -433,11 +433,12 @@ enter_chroot() {
 	
 	# Addon setup
 	if [ "$ADDON" = "pve" ]; then
-		apt install -y proxmox-default-kernel
+		apt-mark hold grub-common grub-pc-bin grub-pc grub2-common os-prober
+		apt install -y proxmox-default-headers
 			cat > /root/setup-pve.sh <<- EOF_SETPVE
 			#!/bin/bash
 			apt install -y proxmox-ve postfix open-iscsi chrony
-			apt remove -y linux-image-amd64 'linux-image-6.12*' os-prober
+			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			echo "Proxmox VE installation complete. Reboot to finish."
 			sed -i '/^./setup-pve.sh/d' /root/.bashrc
 			EOF_SETPVE
