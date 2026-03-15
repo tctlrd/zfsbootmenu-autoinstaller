@@ -455,7 +455,7 @@ enter_chroot() {
 
 	# Configure EFI boot entries
 	echo "[[LOG]] Configuring EFI boot entries..."
-	for num in $(efibootmgr | grep -oE 'Boot0[0-9A-F]+' | sed 's/Boot//'); do efibootmgr -B -b $num; done
+	for num in \$(efibootmgr | grep -oE 'Boot0[0-9A-F]+' | sed 's/Boot//'); do efibootmgr -B -b \$num; done
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu (Backup)" -l '\EFI\ZBM\VMLINUZ-BACKUP.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\ZBM\VMLINUZ.EFI'
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
