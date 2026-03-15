@@ -327,12 +327,7 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "[[LOG]] Installing kernel and ZFS packages..."
-	apt full-upgrade -y
-	if [ "$ADDON" = "pve" ]; then
-		apt install -y proxmox-default-headers zfs-initramfs
-	else
-		apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
-	fi
+	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
 
@@ -377,16 +372,6 @@ enter_chroot() {
 	isc-dhcp-client \
 	ssh \
 	dropbear-bin
-
-	# Install Proxmox packages based on addon
-	if [ "$ADDON" = "pve" ]; then
-		apt install -y proxmox-ve postfix open-iscsi chrony
-	elif [ "$ADDON" = "pbs" ]; then
-		apt install -y proxmox-backup-server
-	elif [ "$ADDON" = "pmg" ]; then
-		apt install -y proxmox-mailgateway-container
-	fi
-	rm -f /etc/apt/sources.list.d/pve-enterprise.sources
 
 	# Install ZFSBootMenu
 	echo "[[LOG]] Installing ZFSBootMenu."
@@ -453,6 +438,17 @@ enter_chroot() {
 		echo "auto $NET_IF" >> /etc/network/interfaces
 		echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 	fi
+	
+	# Addon setup
+	if [ "$ADDON" = "pve" ]; then
+		return
+	elif [ "$ADDON" = "pbs" ]; then
+		apt install -y proxmox-backup-server
+	elif [ "$ADDON" = "pmg" ]; then
+		apt install -y proxmox-mailgateway-container
+	fi
+	rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+
 	EOF
 }
 
