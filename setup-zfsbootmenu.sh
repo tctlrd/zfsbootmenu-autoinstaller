@@ -326,7 +326,7 @@ enter_chroot() {
 
 	# Install kernel and ZFS packages
 	echo "[[LOG]] Installing kernel and ZFS packages..."
-	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs
+	apt install -y linux-headers-amd64 linux-image-amd64 zfs-initramfs dkms
 	echo "REMAKE_INITRD=yes" > /etc/dkms/zfs.conf
 	echo "UMASK=0077" > /etc/initramfs-tools/conf.d/umask.conf
 
