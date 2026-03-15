@@ -185,12 +185,7 @@ install_host_packages() {
 	echo "[[LOG]] Installing necessary packages"
 	apt update
 	apt full-upgrade -y
-	#if [ "$ADDON" = "pve" ]; then
-	#	apt install -y debootstrap gdisk dosfstools dkms proxmox-default-headers
-	#	apt remove -y linux-image-amd64 linux-image-$KERNEL_VERSION
-	#else
 	apt install -y debootstrap gdisk dosfstools dkms linux-headers-$KERNEL_VERSION
-	#fi
 	apt install -y zfsutils-linux
 }
 
