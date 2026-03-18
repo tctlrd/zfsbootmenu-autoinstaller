@@ -531,6 +531,7 @@ enter_chroot() {
 		if [[ "$ADDON" = "pve" && -n "$BRIDGE" ]]; then
 			echo "[[LOG]] Configuring network for Proxmox VE bridge $BRIDGE."
 			cat >> /etc/network/interfaces.final <<- EOF_NET
+
 				iface $NET_IF inet manual
 
 				auto $BRIDGE
