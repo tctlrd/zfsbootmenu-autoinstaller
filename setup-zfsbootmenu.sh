@@ -638,6 +638,7 @@ completion() {
 			"3")
 				echo "[[LOG]] Exiting to chroot..."
 				echo "[[LOG]] Type 'exit' to exit the chroot environment."
+				echo "[[LOG]] The \"No such file or directory\" warning below is expected."
 				exec chroot $MNT_P /bin/bash
 				;;
 			*)
