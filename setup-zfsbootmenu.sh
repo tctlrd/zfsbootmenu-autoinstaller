@@ -459,10 +459,15 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-			[[ -f /etc/network/interfaces.final ]] && \
-				mv /etc/network/interfaces.final /etc/network/interfaces
+			if [ -f /etc/network/interfaces.final ]; then
 				rm -f /etc/network/interfaces.new
-			echo "Proxmox VE installation complete. Reboot to finish."
+				mv /etc/network/interfaces.final /etc/network/interfaces
+				echo "Proxmox VE installation complete. Reboot to finish."
+			else
+				echo "Proxmox VE installation complete. Reboot to finish."
+				echo "No network bridge setup. Please configure network manually."
+				echo "You can find the network configuration in /etc/network/interfaces.new"
+			fi
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
 		chmod +x /root/setup-pve.sh
