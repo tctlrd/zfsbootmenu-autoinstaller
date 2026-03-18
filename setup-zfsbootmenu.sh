@@ -459,7 +459,7 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-			mv /etc/network/interfaces.final /etc/network/interfaces
+			[[ -f /etc/network/interfaces.final ]] && mv /etc/network/interfaces.final /etc/network/interfaces
 			echo "Proxmox VE installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
