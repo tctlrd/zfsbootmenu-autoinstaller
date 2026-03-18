@@ -27,7 +27,7 @@ POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
 POOL_NAME="zroot"
 ID="" # name for the root dataset
 BOOT_UUID="" # autoset and used for the fstab entry
-
+IP_ADDR="" # autoset from IP_WITH_CIDR
 MNT_P="/mnt" # mount point for the root dataset during installation
 
 # Override variables with those from install.env file if it exists.
@@ -109,40 +109,42 @@ select_disk() {
 
 network_config() {
 	# Check if network interface is already selected
-	if [[ -n "$NET_IF" ]]; then
+	if [[ -z "$NET_IF" ]]; then
 		echo "[[LOG]] Network interface selected: $NET_IF"
-		return
-	fi
-	
-	echo "[[LOG]] Available network interfaces:"
-	# List available network interfaces and store them in an array
-	mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
+		
+		echo "[[LOG]] Available network interfaces:"
+		# List available network interfaces and store them in an array
+		mapfile -t interfaces < <(ip link show | grep -E '^[0-9]+:' | awk -F': ' '{print $2}' | grep -v lo)
 
-	# Build whiptail menu options
-	menu_options=()
-	for i in "${!interfaces[@]}"; do
-		menu_options+=("$((i + 1))" "${interfaces[i]}")
-	done
+		# Build whiptail menu options
+		menu_options=()
+		for i in "${!interfaces[@]}"; do
+			menu_options+=("$((i + 1))" "${interfaces[i]}")
+		done
 
-	# Prompt user to select an interface using whiptail
-	choice=$(whiptail --title "Select Network Interface" --menu "Select the network interface you want to use:" 15 60 8 "${menu_options[@]}" 3>&1 1>&2 2>&3)
-	
-	if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
-		NET_IF="${interfaces[$((choice - 1))]}"
-		echo "[[LOG]] Selected network interface: $NET_IF"
-	else
-		echo "No network interface selected or invalid selection. Exiting."
-		exit 1
+		# Prompt user to select an interface using whiptail
+		choice=$(whiptail --title "Select Network Interface" --menu "Select the network interface you want to use:" 15 60 8 "${menu_options[@]}" 3>&1 1>&2 2>&3)
+		
+		if [[ -n "$choice" && $choice -gt 0 && $choice -le ${#interfaces[@]} ]]; then
+			NET_IF="${interfaces[$((choice - 1))]}"
+			echo "[[LOG]] Selected network interface: $NET_IF"
+		else
+			echo "No network interface selected or invalid selection. Exiting."
+			exit 1
+		fi
 	fi
+
 	if [[ -z "$NET_TYPE" ]]; then
 		NET_TYPE=$(whiptail --menu "Select network type:" 10 60 2 \
 			"static" "Static IP" \
 			"dhcp" "DHCP" 3>&1 1>&2 2>&3)
 	fi
+	
 	# Prompt user for network configuration
 	if [[ "$NET_TYPE" == "static" ]]; then
 		[[ -z "$IP_WITH_CIDR" ]] && IP_WITH_CIDR=$(whiptail --inputbox "Enter the static IP address with CIDR (e.g., 10.0.0.7/24):" 10 60 "" 3>&1 1>&2 2>&3)
 		[[ -z "$GATEWAY" ]] && GATEWAY=$(whiptail --inputbox "Enter the gateway IP address:" 10 60 "" 3>&1 1>&2 2>&3)
+		IP_ADDR=${IP_WITH_CIDR%/*}
 	fi
 }
 
@@ -298,7 +300,6 @@ enter_chroot() {
 	chroot $MNT_P /bin/bash <<-EOF
 	# Set hostname
 	echo "$HOSTNAME" > /etc/hostname
-	IP_ADDR=${IP_WITH_CIDR%/*}
 	cat > /etc/hosts <<- EOF_HOSTS
 		127.0.0.1 localhost.localdomain localhost
 		${IP_ADDR:-127.0.1.1} $HOSTNAME
