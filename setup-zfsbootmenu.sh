@@ -5,11 +5,15 @@ INTERACTIVE=true
 ADDON="" # optional: pve, pbs, pmg (proxmox: virtual environment, backup server, mail gateway)
 MLANG=en_US.UTF-8
 TIMEZONE="America/Chicago" # timezone variable demands underscore instead of space (e.g., "America/New_York")
-#NET_IF=""
 #ROOT_PASSWORD=""
 #ENC_PHRASE=""
 #SSH_KEY=""
-#HOSTNAME=""
+#HOSTNAME="machine01"
+#NET_IF="eno1"
+NET_TYPE="dhcp" # static or dhcp (if set to dhcp, manually configure /etc/network/interfaces & /etc/hosts as soon as possible)
+#IP_WITH_CIDR="10.0.0.7/24"
+#GATEWAY="10.0.0.1"
+BRIDGE="vmbr0"
 
 # Use /dev/disk/by-id/xyz123 for persistent device naming or
 # for /dev/sdX1 format set disk suffix var to empty DISK_SUF=""
@@ -17,13 +21,14 @@ BOOT_DISK=""
 POOL_DISK=""
 BOOT_PART="1"
 POOL_PART="2"
-DISK_SUF="-part"
+DISK_SUF="-part" # keep as "-part" for by-id disk paths or "" for /dev/sdX1 format
 BOOT_DEVICE="${BOOT_DISK}${DISK_SUF}${BOOT_PART}"
 POOL_DEVICE="${POOL_DISK}${DISK_SUF}${POOL_PART}"
 POOL_NAME="zroot"
-MNT_P="/mnt"
-ID=$(source /etc/os-release && echo "$ID")  # Get OS ID from /etc/os-release
-BOOT_UUID=""
+ID="" # name for the root dataset
+BOOT_UUID="" # autoset and used for the fstab entry
+
+MNT_P="/mnt" # mount point for the root dataset during installation
 
 # Override variables with those from install.env file if it exists.
 if [ -f "install.env" ]; then
@@ -42,6 +47,7 @@ set_vars(){
 			"pmg" "Proxmox Mail Gateway" 3>&1 1>&2 2>&3)
 		ADDON="$addon_choice"
 	fi
+	ID="${ADDON:-$(source /etc/os-release && echo "$ID")}"
 
 	# Check if credentials are already set
 	if [[ -n "$ROOT_PASSWORD" && -n "$ENC_PHRASE" && -n "$HOSTNAME" && -n "$SSH_KEY" ]]; then
@@ -58,7 +64,7 @@ set_vars(){
 	[[ -z "$ROOT_PASSWORD" ]] && ROOT_PASSWORD=$(whiptail --passwordbox "Enter root password:" 10 60 3>&1 1>&2 2>&3)
 	[[ -z "$ENC_PHRASE" ]] && ENC_PHRASE=$(whiptail --passwordbox "Enter encryption passphrase:" 10 60 3>&1 1>&2 2>&3)
 	[[ -z "$SSH_KEY" ]] && SSH_KEY=$(whiptail --inputbox "Enter SSH public key:" 10 60 3>&1 1>&2 2>&3)
-  
+
 }
 
 select_disk() {
@@ -101,7 +107,7 @@ select_disk() {
 	echo "[[LOG]] Pool device is set to $POOL_DEVICE"
 }
 
-select_network_interface() {
+network_config() {
 	# Check if network interface is already selected
 	if [[ -n "$NET_IF" ]]; then
 		echo "[[LOG]] Network interface selected: $NET_IF"
@@ -127,6 +133,16 @@ select_network_interface() {
 	else
 		echo "No network interface selected or invalid selection. Exiting."
 		exit 1
+	fi
+	if [[ -z "$NET_TYPE" ]]; then
+		NET_TYPE=$(whiptail --menu "Select network type:" 10 60 2 \
+			"static" "Static IP" \
+			"dhcp" "DHCP" 3>&1 1>&2 2>&3)
+	fi
+	# Prompt user for network configuration
+	if [[ "$NET_TYPE" == "static" ]]; then
+		[[ -z "$IP_WITH_CIDR" ]] && IP_WITH_CIDR=$(whiptail --inputbox "Enter the static IP address with CIDR (e.g., 10.0.0.7/24):" 10 60 "" 3>&1 1>&2 2>&3)
+		[[ -z "$GATEWAY" ]] && GATEWAY=$(whiptail --inputbox "Enter the gateway IP address:" 10 60 "" 3>&1 1>&2 2>&3)
 	fi
 }
 
@@ -291,28 +307,28 @@ enter_chroot() {
 	rm -f /etc/apt/sources.list
 	if [ "$ADDON" = "pve" ]; then
 		cat > /etc/apt/sources.list.d/proxmox.sources <<-EOF_PVE
-		Types: deb
-		URIs: http://download.proxmox.com/debian/pve
-		Suites: trixie
-		Components: pve-no-subscription
-		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-		EOF_PVE
+			Types: deb
+			URIs: http://download.proxmox.com/debian/pve
+			Suites: trixie
+			Components: pve-no-subscription
+			Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+			EOF_PVE
 	elif [ "$ADDON" = "pbs" ]; then
 		cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PBS
-		Types: deb
-		URIs: http://download.proxmox.com/debian/pbs
-		Suites: trixie
-		Components: pbs-no-subscription
-		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-		EOF_PBS
+			Types: deb
+			URIs: http://download.proxmox.com/debian/pbs
+			Suites: trixie
+			Components: pbs-no-subscription
+			Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+			EOF_PBS
 	elif [ "$ADDON" = "pmg" ]; then
 		cat >> /etc/apt/sources.list.d/proxmox.sources <<-EOF_PMG
-		Types: deb
-		URIs: http://download.proxmox.com/debian/pmg
-		Suites: trixie
-		Components: pmg-no-subscription
-		Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
-		EOF_PMG
+			Types: deb
+			URIs: http://download.proxmox.com/debian/pmg
+			Suites: trixie
+			Components: pmg-no-subscription
+			Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+			EOF_PMG
 	fi
 	# Update and install necessary packages
 	export LC_ALL=C
@@ -400,7 +416,7 @@ enter_chroot() {
 
 	# Writing dracut.conf.d/...
 	echo "[[LOG]] Writing dracut.conf.d/..."
-		cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
+	cat > /etc/zfsbootmenu/dracut.conf.d/dropbear.conf <<-EOF_DRACUT
 		add_dracutmodules+=" crypt-ssh "
 		install_optional_items+=" /etc/cmdline.d/dracut-network.conf "
 		dropbear_acl=/root/.ssh/authorized_keys
@@ -424,41 +440,41 @@ enter_chroot() {
 	fi
 	if [ "$ADDON" = "pve" ]; then
 		cat > /root/setup-pve.sh <<- EOF_SETPVE
-		#!/bin/bash
-		apt update
-		apt install -y proxmox-ve postfix open-iscsi chrony
-		apt remove -y linux-image-amd64 'linux-image-6.12*'
-		apt autoremove -y
-		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-		echo "Proxmox VE installation complete. Reboot to finish."
-		sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
-		EOF_SETPVE
+			#!/bin/bash
+			apt update
+			apt install -y proxmox-ve postfix open-iscsi chrony
+			apt remove -y linux-image-amd64 'linux-image-6.12*'
+			apt autoremove -y
+			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			echo "Proxmox VE installation complete. Reboot to finish."
+			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
+			EOF_SETPVE
 		chmod +x /root/setup-pve.sh
 		echo "./setup-pve.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pbs" ]; then
 		cat > /root/setup-pbs.sh <<- EOF_SETPBS
-		#!/bin/bash
-		apt update
-		apt install -y proxmox-backup
-		apt remove -y linux-image-amd64 'linux-image-6.12*'
-		apt autoremove -y
-		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-		echo "Proxmox backup server installation complete. Reboot to finish."
-		sed -i '/\.\/setup-pbs\.sh/d' /root/.bashrc
-		EOF_SETPBS
+			#!/bin/bash
+			apt update
+			apt install -y proxmox-backup
+			apt remove -y linux-image-amd64 'linux-image-6.12*'
+			apt autoremove -y
+			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			echo "Proxmox backup server installation complete. Reboot to finish."
+			sed -i '/\.\/setup-pbs\.sh/d' /root/.bashrc
+			EOF_SETPBS
 		chmod +x /root/setup-pbs.sh
 		echo "./setup-pbs.sh" >> /root/.bashrc
 	elif [ "$ADDON" = "pmg" ]; then
 		cat > /root/setup-pmg.sh <<- EOF_SETPMG
-		#!/bin/bash
-		apt update
-		apt install -y proxmox-mailgateway
-		apt remove -y linux-image-amd64 'linux-image-6.12*'
-		apt autoremove -y
-		rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-		echo "Proxmox mail gateway installation complete. Reboot to finish."
-		sed -i '/\.\/setup-pmg\.sh/d' /root/.bashrc
-		EOF_SETPMG
+			#!/bin/bash
+			apt update
+			apt install -y proxmox-mailgateway
+			apt remove -y linux-image-amd64 'linux-image-6.12*'
+			apt autoremove -y
+			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			echo "Proxmox mail gateway installation complete. Reboot to finish."
+			sed -i '/\.\/setup-pmg\.sh/d' /root/.bashrc
+			EOF_SETPMG
 		chmod +x /root/setup-pmg.sh
 		echo "./setup-pmg.sh" >> /root/.bashrc
 	fi
@@ -479,29 +495,88 @@ enter_chroot() {
 	efibootmgr -c -d "$BOOT_DISK" -p "$BOOT_PART" -L "ZFSBootMenu" -l '\EFI\BOOT\bootx64.efi'
 
 	# Configure network
-	echo "[[LOG]] Configuring network for DHCP on $NET_IF."
-	
-	# Add network configuration
-	sed -i "/$NET_IF/d" /etc/network/interfaces
-	echo "auto $NET_IF" >> /etc/network/interfaces
-	echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
+	if [ "$NET_TYPE" = "dhcp" ]; then
+		echo "[[LOG]] Configuring network for DHCP on $NET_IF."
+		# Add network configuration
+		sed -i "/$NET_IF/d" /etc/network/interfaces
+		echo "auto $NET_IF" >> /etc/network/interfaces
+		echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
+	elif [ "$NET_TYPE" = "static" ]; then
+		echo "[[LOG]] Configuring network for static IP of $IP_WITH_CIDR on $NET_IF."
+		# Add network configuration
+		sed -i "/$NET_IF/d" /etc/network/interfaces
+		cat > /etc/network/interfaces <<- EOF_NET
+			iface $NET_IF inet manual
 
+			auto $BRIDGE
+			iface $BRIDGE inet static
+			    address $IP_WITH_CIDR
+			    gateway $GATEWAY
+			    bridge_ports $INTERFACE
+			    bridge_stp off
+			    bridge_fd 0
+			EOF_NET
+	fi
+	cat > /etc/hosts <<- EOF_HOSTS
+		127.0.0.1 localhost.localdomain localhost
+		${IP_WITH_CIDR:-127.0.1.1} $HOSTNAME
+
+		# The following lines are desirable for IPv6 capable hosts
+
+		::1     ip6-localhost ip6-loopback
+		fe00::0 ip6-localnet
+		ff00::0 ip6-mcastprefix
+		ff02::1 ip6-allnodes
+		ff02::2 ip6-allrouters
+		ff02::3 ip6-allhosts
+		EOF_HOSTS
 	EOF
 }
 
-final_cleanup() {
-	echo "[[LOG]] Exporting ZFS pool and completing installation..."
+cleanup() {
+	echo "[[LOG]] Exporting ZFS pool."
 	umount -n -R /mnt
 	zpool export -a
 }
 
+completion() {
+	# Show completion options
+	if [[ "$INTERACTIVE" == "true" ]]; then
+		choice=$(whiptail --title "Installation Complete" --menu "ZFS Boot Menu installation is complete. Choose an option:" 15 60 3 \
+			"1" "Cleanup & Reboot" \
+			"2" "Cleanup Only (Unmount/Export pool)" \
+			"3" "Finish Without Cleanup" 3>&1 1>&2 2>&3)
+		
+		case "$choice" in
+			"1")
+				echo "[[LOG]] Rebooting after cleanup..."
+				cleanup
+				reboot
+				;;
+			"2")
+				echo "[[LOG]] Performing cleanup only..."
+				cleanup
+				;;
+			"3")
+				echo "[[LOG]] Finishing without cleanup..."
+				;;
+			*)
+				echo "[[LOG]] No option selected, finishing without cleanup..."
+				;;
+		esac
+	else
+		cleanup
+		echo "[[LOG]] Installation complete. You may reboot."
+	fi
+}
+
+
 # Execution sequence
 echo "[[LOG]] Starting ZFS Boot Menu installation..."
 echo "[[LOG]] Current kernel version is: $(uname -r)"
-echo "[[LOG]] OS ID from /etc/os-release is: $ID"
 set_vars
 select_disk
-select_network_interface
+network_config
 show_installation_summary
 configure_apt_sources
 install_host_packages
@@ -511,6 +586,4 @@ export_import_zpool
 setup_base_system
 prepare_chroot
 enter_chroot
-final_cleanup
-
-echo "[[LOG]] ZFS Boot Menu installation complete. You may reboot."
+completion
