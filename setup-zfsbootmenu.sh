@@ -542,8 +542,6 @@ enter_chroot() {
 		fi
 	fi
 	EOF
-	echo "[[LOG]] The installation has completed. Type 'exit' to exit the chroot environment."
-	exec chroot $MNT_P /bin/bash
 }
 
 cleanup() {
@@ -558,7 +556,7 @@ completion() {
 		choice=$(whiptail --title "Installation Complete" --menu "ZFS Boot Menu installation is complete. Choose an option:" 15 60 3 \
 			"1" "Reboot" \
 			"2" "Unmount & Export Pool" \
-			"3" "Finish Without Unmount" 3>&1 1>&2 2>&3)
+			"3" "Exit to chroot" 3>&1 1>&2 2>&3)
 		
 		case "$choice" in
 			"1")
@@ -571,8 +569,9 @@ completion() {
 				cleanup
 				;;
 			"3")
-				echo "[[LOG]] Finishing without unmount..."
-				echo "[[LOG]] Re-enter chroot with 'chroot $MNT_P /bin/bash'."
+				echo "[[LOG]] Exiting to chroot..."
+				echo "[[LOG]] Type 'exit' to exit the chroot environment."
+				exec chroot $MNT_P /bin/bash
 				;;
 			*)
 				echo "[[LOG]] No option selected, finishing without unmount..."
