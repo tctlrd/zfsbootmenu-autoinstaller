@@ -521,15 +521,17 @@ enter_chroot() {
 	if [ "$NET_TYPE" = "dhcp" ]; then
 		echo "[[LOG]] Configuring network for DHCP on $NET_IF."
 		# Add network configuration
-		sed -i "/$NET_IF/d" /etc/network/interfaces
+		rm -f /etc/network/interfaces
 		echo "auto $NET_IF" >> /etc/network/interfaces
 		echo "iface $NET_IF inet dhcp" >> /etc/network/interfaces
 	elif [ "$NET_TYPE" = "static" ]; then
 		echo "[[LOG]] Configuring network for static IP of $IP_WITH_CIDR on $NET_IF."
 		# Add network configuration
-		sed -i "/$NET_IF/d" /etc/network/interfaces
-		[[ "$ADDON" = "pve" ]] && cp /etc/network/interfaces /etc/network/interfaces.final
+		rm -f /etc/network/interfaces
 		cat >> /etc/network/interfaces <<- EOF_NET_INIT
+			auto lo
+			iface lo inet loopback
+			source /etc/network/interfaces.d/*
 			auto $NET_IF
 			iface $NET_IF inet static
 			    address $IP_WITH_CIDR
@@ -538,9 +540,10 @@ enter_chroot() {
 		if [[ "$ADDON" = "pve" && -n "$BRIDGE" ]]; then
 			echo "[[LOG]] Configuring network for Proxmox VE bridge $BRIDGE."
 			cat >> /etc/network/interfaces.final <<- EOF_NET
-
+				auto lo
+				iface lo inet loopback
+				source /etc/network/interfaces.d/*
 				iface $NET_IF inet manual
-
 				auto $BRIDGE
 				iface $BRIDGE inet static
 				    address $IP_WITH_CIDR
