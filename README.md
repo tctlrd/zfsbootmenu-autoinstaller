@@ -62,8 +62,8 @@ ssh root@10.0.0.7 -p 222
 ## Addon Setup
 This only applies if you enable a proxmox addon.  
 Upon first boot and login the proxmox addon installation will start automatically.  
-If it does not, or fails, you may need to manually (re-)run the script `/root/[pve|pbs|pmg]-setup.sh`  
-After they complete, perform a reboot. Make sure your network cofig and /etc/hosts file are correct.  
+If it does not, or fails, you may need to manually (re-)run the script `./root/[pve|pbs|pmg]-setup.sh`  
+After they complete, perform a reboot. Make sure your network config and /etc/hosts file are correct.  
 
 
 ## Important Notes
