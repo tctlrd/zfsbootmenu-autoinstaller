@@ -68,8 +68,9 @@ Enter passphrase for 'zroot': enter_your_passphrase_here
 This only applies if you enable a proxmox addon.  
 Upon first boot and login the proxmox addon installation will start automatically.  
 If it does not, or fails, you may need to manually (re-)run the script `./root/[pve|pbs|pmg]-setup.sh`  
-After they complete, perform a reboot. Make sure your network config and /etc/hosts file are correct.  
-
+After they complete, perform a reboot. Make sure your network config and /etc/hosts file are correct. 
+The /etc/hosts file need to contain the machine's ip and hostname for proxmox ve to start correctly.  
+`10.0.0.7 hostname`
 
 ## Important Notes
 
