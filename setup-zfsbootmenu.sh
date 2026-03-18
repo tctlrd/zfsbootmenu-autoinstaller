@@ -171,7 +171,7 @@ show_installation_summary() {
 	summary+="Boot Device: ${BOOT_DEVICE:-[NOT SELECTED]}\n"
 	summary+="Pool Device: ${POOL_DEVICE:-[NOT SELECTED]}\n"
 	summary+="Network Interface: ${NET_IF:-[NOT SELECTED]}\n"
-	summary+="Network Config: ${NET_TYPE:-[NOT SET]} ${IP_WITH_CIDR:+($IP_WITH_CIDR)} ${GATEWAY:+(Gateway: $GATEWAY)}\n"
+	summary+="Network Config: ${NET_TYPE:-[NOT SET]} ${IP_WITH_CIDR:+IP: $IP_WITH_CIDR} ${GATEWAY:+Gateway: $GATEWAY}\n"
 	summary+="Timezone: $TIMEZONE\n"
 	summary+="Locale: $MLANG\n\n"
 	summary+="Proceed with Debian + ZFSBootMenu installation?"
