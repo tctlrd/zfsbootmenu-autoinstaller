@@ -542,6 +542,8 @@ enter_chroot() {
 		fi
 	fi
 	EOF
+	echo "[[LOG]] The installation has completed. Type 'exit' to exit the chroot environment."
+	exec chroot $MNT_P /bin/bash
 }
 
 cleanup() {
@@ -570,7 +572,7 @@ completion() {
 				;;
 			"3")
 				echo "[[LOG]] Finishing without unmount..."
-				echo "[[LOG]] Re-enter chroot with 'chroot /mnt /bin/bash'."
+				echo "[[LOG]] Re-enter chroot with 'chroot $MNT_P /bin/bash'."
 				;;
 			*)
 				echo "[[LOG]] No option selected, finishing without unmount..."
