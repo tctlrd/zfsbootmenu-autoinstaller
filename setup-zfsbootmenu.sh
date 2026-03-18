@@ -541,6 +541,7 @@ enter_chroot() {
 				EOF_NET
 		fi
 	fi
+	EOF
 }
 
 cleanup() {
