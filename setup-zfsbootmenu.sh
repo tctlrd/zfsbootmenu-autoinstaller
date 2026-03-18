@@ -189,18 +189,18 @@ configure_apt_sources() {
 	echo "[[LOG]] Configuring APT sources..."
 	rm -f /etc/apt/sources.list
 	cat > /etc/apt/sources.list.d/debian.sources <<-EOF_APT
-	Types: deb deb-src
-	URIs: http://deb.debian.org/debian/
-	Suites: trixie trixie-updates
-	Components: main non-free-firmware contrib
-	Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+		Types: deb deb-src
+		URIs: http://deb.debian.org/debian/
+		Suites: trixie trixie-updates
+		Components: main non-free-firmware contrib
+		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-	Types: deb deb-src
-	URIs: http://security.debian.org/debian-security/
-	Suites: trixie-security
-	Components: main non-free-firmware contrib
-	Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-	EOF_APT
+		Types: deb deb-src
+		URIs: http://security.debian.org/debian-security/
+		Suites: trixie-security
+		Components: main non-free-firmware contrib
+		Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+		EOF_APT
 }
 
 install_host_packages() {
@@ -296,10 +296,22 @@ prepare_chroot() {
 enter_chroot() {
 	echo "[[LOG]] Entering chroot environment to configure system..."
 	chroot $MNT_P /bin/bash <<-EOF
-
 	# Set hostname
 	echo "$HOSTNAME" > /etc/hostname
-	[ "$ADDON" != "pve" ] && echo "127.0.1.1    $HOSTNAME" >> /etc/hosts
+	IP_ADDR=${IP_WITH_CIDR%/*}
+	cat > /etc/hosts <<- EOF_HOSTS
+		127.0.0.1 localhost.localdomain localhost
+		${IP_ADDR:-127.0.1.1} $HOSTNAME
+
+		# The following lines are desirable for IPv6 capable hosts
+
+		::1     ip6-localhost ip6-loopback
+		fe00::0 ip6-localnet
+		ff00::0 ip6-mcastprefix
+		ff02::1 ip6-allnodes
+		ff02::2 ip6-allrouters
+		ff02::3 ip6-allhosts
+		EOF_HOSTS
 	mkdir /etc/zfs
 	echo "$ENC_PHRASE" > /etc/zfs/zroot.key
 	# Set SSH key
@@ -447,6 +459,7 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			mv /etc/network/interfaces.final /etc/network/interfaces
 			echo "Proxmox VE installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
@@ -506,32 +519,28 @@ enter_chroot() {
 		echo "[[LOG]] Configuring network for static IP of $IP_WITH_CIDR on $NET_IF."
 		# Add network configuration
 		sed -i "/$NET_IF/d" /etc/network/interfaces
-		cat > /etc/network/interfaces <<- EOF_NET
-			iface $NET_IF inet manual
-
-			auto $BRIDGE
-			iface $BRIDGE inet static
+		[[ "$ADDON" = "pve" ]] && cp /etc/network/interfaces /etc/network/interfaces.final
+		cat > /etc/network/interfaces <<- EOF_NET_INIT
+			auto $NET_IF
+			iface $NET_IF inet static
 			    address $IP_WITH_CIDR
 			    gateway $GATEWAY
-			    bridge_ports $INTERFACE
-			    bridge_stp off
-			    bridge_fd 0
-			EOF_NET
+			EOF_NET_INIT
+		if [ "$ADDON" = "pve" ]; then
+			echo "[[LOG]] Configuring network for Proxmox VE bridge $BRIDGE."
+			cat > /etc/network/interfaces.final <<- EOF_NET
+				iface $NET_IF inet manual
+
+				auto $BRIDGE
+				iface $BRIDGE inet static
+				    address $IP_WITH_CIDR
+				    gateway $GATEWAY
+				    bridge_ports $NET_IF
+				    bridge_stp off
+				    bridge_fd 0
+				EOF_NET
+		fi
 	fi
-	cat > /etc/hosts <<- EOF_HOSTS
-		127.0.0.1 localhost.localdomain localhost
-		${IP_WITH_CIDR:-127.0.1.1} $HOSTNAME
-
-		# The following lines are desirable for IPv6 capable hosts
-
-		::1     ip6-localhost ip6-loopback
-		fe00::0 ip6-localnet
-		ff00::0 ip6-mcastprefix
-		ff02::1 ip6-allnodes
-		ff02::2 ip6-allrouters
-		ff02::3 ip6-allhosts
-		EOF_HOSTS
-	EOF
 }
 
 cleanup() {
@@ -544,9 +553,9 @@ completion() {
 	# Show completion options
 	if [[ "$INTERACTIVE" == "true" ]]; then
 		choice=$(whiptail --title "Installation Complete" --menu "ZFS Boot Menu installation is complete. Choose an option:" 15 60 3 \
-			"1" "Cleanup & Reboot" \
-			"2" "Cleanup Only (Unmount/Export pool)" \
-			"3" "Finish Without Cleanup" 3>&1 1>&2 2>&3)
+			"1" "Reboot" \
+			"2" "Unmount & Export Pool" \
+			"3" "Finish Without Unmount" 3>&1 1>&2 2>&3)
 		
 		case "$choice" in
 			"1")
@@ -555,14 +564,15 @@ completion() {
 				reboot
 				;;
 			"2")
-				echo "[[LOG]] Performing cleanup only..."
+				echo "[[LOG]] Performing unmount and export of ZFS pool..."
 				cleanup
 				;;
 			"3")
-				echo "[[LOG]] Finishing without cleanup..."
+				echo "[[LOG]] Finishing without unmount..."
+				echo "[[LOG]] Re-enter chroot with 'chroot /mnt /bin/bash'."
 				;;
 			*)
-				echo "[[LOG]] No option selected, finishing without cleanup..."
+				echo "[[LOG]] No option selected, finishing without unmount..."
 				;;
 		esac
 	else
