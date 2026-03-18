@@ -146,7 +146,7 @@ network_config() {
 	fi
 }
 
-show_installation_summary() {
+installation_summary() {
 	# Skip confirmation if INTERACTIVE is false
 	if [[ "$INTERACTIVE" == "false" ]]; then
 		echo "[[LOG]] Running in non-interactive mode, proceeding with installation..."
@@ -588,7 +588,7 @@ echo "[[LOG]] Current kernel version is: $(uname -r)"
 set_vars
 select_disk
 network_config
-show_installation_summary
+installation_summary
 configure_apt_sources
 install_host_packages
 partition_disk
