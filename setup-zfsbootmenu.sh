@@ -139,7 +139,7 @@ network_config() {
 			"static" "Static IP" \
 			"dhcp" "DHCP" 3>&1 1>&2 2>&3)
 	fi
-	
+
 	# Prompt user for network configuration
 	if [[ "$NET_TYPE" == "static" ]]; then
 		[[ -z "$IP_WITH_CIDR" ]] && IP_WITH_CIDR=$(whiptail --inputbox "Enter the static IP address with CIDR (e.g., 10.0.0.7/24):" 10 60 "" 3>&1 1>&2 2>&3)
@@ -174,6 +174,7 @@ installation_summary() {
 	summary+="Pool Device: ${POOL_DEVICE:-[NOT SELECTED]}\n"
 	summary+="Network Interface: ${NET_IF:-[NOT SELECTED]}\n"
 	summary+="Network Config: ${NET_TYPE:-[NOT SET]} ${IP_WITH_CIDR:+IP: $IP_WITH_CIDR} ${GATEWAY:+Gateway: $GATEWAY}\n"
+	summary+="IP Address: ${IP_ADDR:-[NOT SET]}\n"
 	summary+="Timezone: $TIMEZONE\n"
 	summary+="Locale: $MLANG\n\n"
 	summary+="Proceed with Debian + ZFSBootMenu installation?"
