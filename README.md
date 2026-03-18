@@ -47,7 +47,7 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    ```
 
 ## Configuration
-
+The script will promt for essential variables that have not been set.  
 This script sets default variables for installation.  
 You can modify these defaults by creating an `install.env` file with the desired values.  
 There is an `example.install.env` file in the repository and browsing the install script will show you all the variables that can be set.
@@ -67,9 +67,9 @@ Enter passphrase for 'zroot': enter_your_passphrase_here
 ## Addon Setup
 This only applies if you enable a proxmox addon.  
 Upon first boot and login the proxmox addon installation will start automatically.  
-If it does not, or fails, you may need to manually (re-)run the script `./root/[pve|pbs|pmg]-setup.sh`  
-After they complete, perform a reboot. Make sure your network config and /etc/hosts file are correct. 
-The /etc/hosts file need to contain the machine's ip and hostname for proxmox ve to start correctly.  
+If it does not, or fails, you may need to manually (re-)run the script `./root/[pve|pbs|pmg]-setup.sh`   
+After they complete, perform a reboot. Make sure your network config and /etc/hosts file are correct.  
+If you are running Proxmox VE, the /etc/hosts file needs to contain the machine's ip and hostname for Proxmox VE to start correctly; 127.0.1.1 is not sufficient...    
 `10.0.0.7 hostname`
 
 ## Important Notes
