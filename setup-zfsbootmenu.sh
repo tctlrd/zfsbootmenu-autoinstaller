@@ -459,7 +459,9 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
-			[[ -f /etc/network/interfaces.final ]] && mv /etc/network/interfaces.final /etc/network/interfaces
+			[[ -f /etc/network/interfaces.final ]] && \
+				mv /etc/network/interfaces.final /etc/network/interfaces
+				rm -f /etc/network/interfaces.new
 			echo "Proxmox VE installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
@@ -520,15 +522,15 @@ enter_chroot() {
 		# Add network configuration
 		sed -i "/$NET_IF/d" /etc/network/interfaces
 		[[ "$ADDON" = "pve" ]] && cp /etc/network/interfaces /etc/network/interfaces.final
-		cat > /etc/network/interfaces <<- EOF_NET_INIT
+		cat >> /etc/network/interfaces <<- EOF_NET_INIT
 			auto $NET_IF
 			iface $NET_IF inet static
 			    address $IP_WITH_CIDR
 			    gateway $GATEWAY
 			EOF_NET_INIT
-		if [ "$ADDON" = "pve" ]; then
+		if [[ "$ADDON" = "pve" && -n "$BRIDGE" ]]; then
 			echo "[[LOG]] Configuring network for Proxmox VE bridge $BRIDGE."
-			cat > /etc/network/interfaces.final <<- EOF_NET
+			cat >> /etc/network/interfaces.final <<- EOF_NET
 				iface $NET_IF inet manual
 
 				auto $BRIDGE
