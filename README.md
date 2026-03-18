@@ -53,6 +53,11 @@ You can modify these defaults by creating an `install.env` file with the desired
 There is an `example.install.env` file in the repository and browsing the install script will show you all the variables that can be set.
 
 ## Remote Disk Unlock
+Connect with ssh and use port 222  
+Enter "zbm" when prompted.  
+Enter your passphrase.  
+Hit enter to boot the selected drive.
+
 ```
 ssh root@10.0.0.7 -p 222
 zfsbootmenu ~ > zbm
