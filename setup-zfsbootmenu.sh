@@ -278,6 +278,8 @@ setup_base_system() {
 	cp /etc/hostid $MNT_P/etc/
 	cp /etc/resolv.conf $MNT_P/etc/
 	cp /etc/apt/sources.list.d/debian.sources $MNT_P/etc/apt/sources.list.d/
+	mkdir -p $MNT_P/usr/local/src/zfsbootmenu
+	wget https://get.zfsbootmenu.org/source -O $MNT_P/usr/local/src/zfsbootmenu/zfsbootmenu-source.tar.gz
 	[[ "$ADDON" =~ ^(pve|pmg|pbs)$ ]] && \
 		wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg \
 			-O $MNT_P/usr/share/keyrings/proxmox-archive-keyring.gpg
@@ -392,9 +394,7 @@ enter_chroot() {
 
 	# Install ZFSBootMenu
 	echo "[[LOG]] Installing ZFSBootMenu."
-	mkdir -p /usr/local/src/zfsbootmenu
 	cd /usr/local/src/zfsbootmenu
-	curl -L https://get.zfsbootmenu.org/source -o zfsbootmenu-source.tar.gz
 	tar -zxv --strip-components=1 -f zfsbootmenu-source.tar.gz
 	rm zfsbootmenu-source.tar.gz
 	make core dracut
