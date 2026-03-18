@@ -55,8 +55,8 @@ There is an `example.install.env` file in the repository and browsing the instal
 ## Remote Disk Unlock
 ```
 ssh root@10.0.0.7 -p 222
-> zbm
-> passphrase
+zfsbootmenu ~ > zbm
+Enter passphrase for 'zroot': enter_your_passphrase_here
 ```
 
 ## Addon Setup
