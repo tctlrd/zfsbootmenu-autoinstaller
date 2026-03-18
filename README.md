@@ -47,9 +47,8 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    ```
 
 ## Configuration
-The script will promt for essential variables that have not been set.  
-This script sets default variables for installation.  
-You can modify these defaults by creating an `install.env` file with the desired values.  
+The script will promt for essential variables that have not been set.   
+You can set variables for the script by creating an `install.env` file with the desired values.  
 There is an `example.install.env` file in the repository and browsing the install script will show you all the variables that can be set.
 
 ## Remote Disk Unlock
