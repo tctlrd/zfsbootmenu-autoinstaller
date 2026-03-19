@@ -1,6 +1,6 @@
-# ZFSBootMenu Installation Script
+# Installation Script: Debian + ZFS Encrypted root + ZFSBootMenu (+ Proxmox: PVE/PBS/PMG)
 
-This script automates the installation and configuration of ZFSBootMenu on a Linux system from a live installation environment. It has been tested on Debian and sets up a ZFS root with EFI boot using ZFSBootMenu.
+This script automates the installation of debian trixie from a live iso with zfsbootmenu, zfs root pool encryption, dracut-crypt-ssh remote unlock, and optionally installs Proxmox: Virtual Environment, Mail Gateway, or Backup Server. 
 
 ## Prerequisites
 
@@ -23,30 +23,41 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
 
 ## Usage
 
-1. **Run the Script**  
+### Preperation
 
-   Debian Live ISO images are available here: https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/  
-   I usually use the `standard` version.
+1. **Boot into your live environment.**
 
-   Boot into your live environment, get root access.
+Debian Live ISO images are available here:  
+https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/  
+I use the `standard` version. 
 
-   ```bash
-   sudo -i
-   ```
-   Optional: setup ssh and connect via ssh for next step.
-   ```
-   apt install -y ssh tmux
-   echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE3TtIL0HYZxtIwJ0dp3VE33+IBgoUthd0zrSoB3viih root@example" > .ssh/authorized_keys
-   ```
+Optional: Load the live ISO into ram (allowing removal of the boot media after boot finishes).  
+This is helpful if using the same boot media with multiple machines, such as with a PiKVM + switch.  
+In the bootloader of the Live ISO, hit `e` to edit the kernel parameters for "Live system (amd64)".  
+Add `toram` at the end of the linux line, after `findiso=${iso_path}` and press F10 to boot.  
 
-   Download and run the script.  
-   Optional: run in a tmux session for return if disconnected via `tmux attach`  
-   ```bash
-   tmux
-   wget https://raw.githubusercontent.com/tctlrd/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
-   chmod +x setup-zfsbootmenu.sh
-   ./setup-zfsbootmenu.sh
-   ```
+### Run the Script
+   
+2. **Get root access.**
+
+```bash
+sudo -i
+```
+Optional: setup ssh (and tmux) and connect via ssh for next step.
+```
+apt install -y ssh tmux
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE3TtIL0HYZxtIwJ0dp3VE33+IBgoUthd0zrSoB3viih root@example" > .ssh/authorized_keys
+```
+
+3. **Download and run the script.**  
+
+Optional: run in a tmux session; return if ssh is disconnected via `tmux attach`  
+```bash
+tmux # optional: enters a tmux session
+wget https://raw.githubusercontent.com/tctlrd/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
+chmod +x setup-zfsbootmenu.sh
+./setup-zfsbootmenu.sh
+```
 
 ## Configuration
 The script will promt for essential variables that have not been set.   
