@@ -1,4 +1,4 @@
-# Installation Script: Debian + ZFS Encrypted root + ZFSBootMenu (+ Proxmox: PVE/PBS/PMG)
+# Debian Live Installer: ZFSBootMenu + Encrypted Root + Proxmox
 
 This script automates the installation of debian trixie from a live iso with zfsbootmenu, zfs root pool encryption, dracut-crypt-ssh remote unlock, and optionally installs Proxmox: Virtual Environment, Mail Gateway, or Backup Server. 
 
