@@ -28,19 +28,21 @@ This script automates the installation and configuration of ZFSBootMenu on a Lin
    Debian Live ISO images are available here: https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid/  
    I usually use the `standard` version.
 
-   Boot into your live environment, get root access, setup ssh (optional).
+   Boot into your live environment, get root access.
 
    ```bash
    sudo -i
    ```
-   Optionally setup ssh and connect via ssh for next step.
+   Optional: setup ssh and connect via ssh for next step.
    ```
-   apt install -y ssh
+   apt install -y ssh tmux
    echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE3TtIL0HYZxtIwJ0dp3VE33+IBgoUthd0zrSoB3viih root@example" > .ssh/authorized_keys
    ```
 
-   Download and run the script:
+   Download and run the script.  
+   Optional: run in a tmux session for return if disconnected via `tmux attach`  
    ```bash
+   tmux
    wget https://raw.githubusercontent.com/tctlrd/zfsbootmenu-autoinstaller/refs/heads/main/setup-zfsbootmenu.sh
    chmod +x setup-zfsbootmenu.sh
    ./setup-zfsbootmenu.sh
