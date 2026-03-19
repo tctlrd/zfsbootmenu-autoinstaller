@@ -286,6 +286,11 @@ setup_base_system() {
 	[[ "$ADDON" =~ ^(pve|pmg|pbs)$ ]] && \
 		wget https://enterprise.proxmox.com/debian/proxmox-archive-keyring-trixie.gpg \
 			-O $MNT_P/usr/share/keyrings/proxmox-archive-keyring.gpg
+	if [ "$ADDON" = "pve" ]; then
+		wget https://codeberg.org/SWEETGOOD/shell-scripts/raw/branch/main/PROXMOX/monit-zfs-patch-check.sh \
+			-O $MNT_P/root/monit-zfs-patch-check.sh
+		chmod +x $MNT_P/root/monit-zfs-patch-check.sh
+	fi
 }
 
 prepare_chroot() {
@@ -460,6 +465,9 @@ enter_chroot() {
 			apt install -y proxmox-ve postfix open-iscsi chrony
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
+			./monit-zfs-patch-check.sh create-backup
+			echo "[[NOTICE]] Enter \"y\" when asked about reverse patching!"
+			./monit-zfs-patch-check.sh patch
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
 			if [ -f /etc/network/interfaces.final ]; then
 				rm -f /etc/network/interfaces.new
