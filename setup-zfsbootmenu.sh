@@ -478,7 +478,9 @@ enter_chroot() {
 				echo "No network bridge setup. Please configure network manually."
 				echo "You can find the network configuration in /etc/network/interfaces.new"
 			fi
-			bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh)"
+			curl -OfsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh
+			chmod +x post-pve-install.sh
+			./post-pve-install.sh
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
 		chmod +x /root/setup-pve.sh
@@ -491,7 +493,9 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pbs-enterprise.sources
-			bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh)"
+			curl -OfsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pbs-install.sh
+			chmod +x post-pbs-install.sh
+			./post-pbs-install.sh
 			echo "Proxmox backup server installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pbs\.sh/d' /root/.bashrc
 			EOF_SETPBS
@@ -505,7 +509,9 @@ enter_chroot() {
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
 			rm -f /etc/apt/sources.list.d/pmg-enterprise.sources
-			bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pmg-install.sh)"
+			curl -OfsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pmg-install.sh
+			chmod +x post-pmg-install.sh
+			./post-pmg-install.sh
 			echo "Proxmox mail gateway installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pmg\.sh/d' /root/.bashrc
 			EOF_SETPMG
