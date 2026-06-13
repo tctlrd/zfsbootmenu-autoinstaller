@@ -489,7 +489,7 @@ enter_chroot() {
 			apt install -y proxmox-backup
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
-			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			rm -f /etc/apt/sources.list.d/pbs-enterprise.sources
 			echo "Proxmox backup server installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pbs\.sh/d' /root/.bashrc
 			EOF_SETPBS
@@ -502,7 +502,7 @@ enter_chroot() {
 			apt install -y proxmox-mailgateway
 			apt remove -y linux-image-amd64 'linux-image-6.12*'
 			apt autoremove -y
-			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			rm -f /etc/apt/sources.list.d/pmg-enterprise.sources
 			echo "Proxmox mail gateway installation complete. Reboot to finish."
 			sed -i '/\.\/setup-pmg\.sh/d' /root/.bashrc
 			EOF_SETPMG
