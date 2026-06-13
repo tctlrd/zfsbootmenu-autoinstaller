@@ -469,6 +469,9 @@ enter_chroot() {
 			echo "[[NOTICE]] Enter \"y\" when asked about reverse patching!"
 			./monit-zfs-patch-check.sh patch
 			rm -f /etc/apt/sources.list.d/pve-enterprise.sources
+			curl -OfsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh
+			chmod +x post-pve-install.sh
+			./post-pve-install.sh
 			if [ -f /etc/network/interfaces.final ]; then
 				rm -f /etc/network/interfaces.new
 				mv /etc/network/interfaces.final /etc/network/interfaces
@@ -478,9 +481,6 @@ enter_chroot() {
 				echo "No network bridge setup. Please configure network manually."
 				echo "You can find the network configuration in /etc/network/interfaces.new"
 			fi
-			curl -OfsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh
-			chmod +x post-pve-install.sh
-			./post-pve-install.sh
 			sed -i '/\.\/setup-pve\.sh/d' /root/.bashrc
 			EOF_SETPVE
 		chmod +x /root/setup-pve.sh
